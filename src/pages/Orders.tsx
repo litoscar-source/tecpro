@@ -155,12 +155,13 @@ export function Orders() {
           : editingOrder.completedAt,
       });
     } else {
-      let newId = `${settings.orderSeries}-0001`;
-      const seriesOrders = orders.filter(o => o.id.startsWith(`${settings.orderSeries}-`));
+      const series = settings?.orderSeries || new Date().getFullYear().toString();
+      let newId = `${series}-0001`;
+      const seriesOrders = orders.filter(o => o.id.startsWith(`${series}-`));
       if (seriesOrders.length > 0) {
         const numericIds = seriesOrders.map(o => parseInt(o.id.split('-')[1], 10)).filter(id => !isNaN(id));
         if (numericIds.length > 0) {
-          newId = `${settings.orderSeries}-${(Math.max(...numericIds) + 1).toString().padStart(4, '0')}`;
+          newId = `${series}-${(Math.max(...numericIds) + 1).toString().padStart(4, '0')}`;
         }
       }
 
@@ -675,7 +676,7 @@ export function Orders() {
         </div>
       )}
 
-      {printData && (
+      {printData && settings && (
         <PrintDocument
           order={printData.order}
           customer={customers.find(c => c.id === printData.order.customerId)!}

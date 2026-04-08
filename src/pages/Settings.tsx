@@ -5,19 +5,21 @@ import { Settings as SettingsIcon, Save, Building, Phone, Mail, MapPin, Image as
 export function Settings() {
   const { settings, updateSettings } = useStore();
   const [formData, setFormData] = useState({
-    companyName: settings.companyName,
-    legalName: settings.legalName,
-    nif: settings.nif,
-    phone: settings.phone,
-    email: settings.email,
-    address: settings.address,
-    city: settings.city,
-    postalCode: settings.postalCode,
-    logo: settings.logo || '',
-    orderSeries: settings.orderSeries || new Date().getFullYear().toString(),
+    companyName: settings?.companyName || '',
+    legalName: settings?.legalName || '',
+    nif: settings?.nif || '',
+    phone: settings?.phone || '',
+    email: settings?.email || '',
+    address: settings?.address || '',
+    city: settings?.city || '',
+    postalCode: settings?.postalCode || '',
+    logo: settings?.logo || '',
+    orderSeries: settings?.orderSeries || new Date().getFullYear().toString(),
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  if (!settings) return null;
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
