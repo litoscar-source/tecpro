@@ -2,8 +2,7 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import path from 'path';
-import { open } from 'sqlite';
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,10 +17,14 @@ async function startServer() {
 
   // Initialize SQLite Database
   // Para alojar no Hostinger com MySQL, pode substituir esta ligação pelo mysql2
-  const db = await open({
-    filename: path.join(__dirname, 'database.sqlite'),
-    driver: sqlite3.Database
-  });
+  const dbNative = new Database(path.join(__dirname, 'database.sqlite'));
+  
+  const db = {
+    exec: async (sql: string) => dbNative.exec(sql),
+    get: async (sql: string, params: any[] = []) => dbNative.prepare(sql).get(...params) as any,
+    all: async (sql: string, params: any[] = []) => dbNative.prepare(sql).all(...params),
+    run: async (sql: string, params: any[] = []) => dbNative.prepare(sql).run(...params)
+  };
 
   // Create tables
   await db.exec(`
