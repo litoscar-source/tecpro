@@ -11,6 +11,7 @@ import { Customers } from './pages/Customers';
 import { Inventory } from './pages/Inventory';
 import { Orders } from './pages/Orders';
 import { Settings } from './pages/Settings';
+import { Agenda } from './pages/Agenda';
 import { PinScreen } from './components/PinScreen';
 import { useStore } from './store/useStore';
 
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="agenda" element={<Agenda />} />
           <Route path="customers" element={<Customers />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="settings" element={<Settings />} />

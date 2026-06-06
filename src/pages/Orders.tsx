@@ -18,20 +18,7 @@ export function Orders() {
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [customerFormData, setCustomerFormData] = useState<Partial<Customer>>({});
 
-  const handleEditCustomer = () => {
-    const c = customers.find(c => c.id === formData.customerId);
-    if (c) {
-      setCustomerFormData(c);
-      setIsEditingCustomer(true);
-    }
-  };
-
-  const handleSaveCustomer = () => {
-    if (formData.customerId && customerFormData) {
-      updateCustomer(formData.customerId, customerFormData);
-      setIsEditingCustomer(false);
-    }
-  };
+  const [showHistoryModal, setShowHistoryModal] = useState<'customer' | 'device' | null>(null);
 
   const [printData, setPrintData] = useState<{ order: ServiceOrder, type: 'entrada' | 'saida' | 'orcamento' } | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -47,10 +34,33 @@ export function Orders() {
     isWarranty: false,
     issueDescription: '',
     technicianNotes: '',
-    status: 'pending' as OrderStatus,
+    status: 'entrada' as OrderStatus,
     partsUsed: [] as { partId: string; quantity: number }[],
     laborCost: 0,
   });
+
+  const pastCustomerOrders = formData.customerId 
+    ? orders.filter(o => o.customerId === formData.customerId && o.id !== editingOrder?.id)
+    : [];
+
+  const pastDeviceOrders = formData.serialNumber && formData.serialNumber.trim() !== ''
+    ? orders.filter(o => o.serialNumber === formData.serialNumber && o.id !== editingOrder?.id)
+    : [];
+
+  const handleEditCustomer = () => {
+    const c = customers.find(c => c.id === formData.customerId);
+    if (c) {
+      setCustomerFormData(c);
+      setIsEditingCustomer(true);
+    }
+  };
+
+  const handleSaveCustomer = () => {
+    if (formData.customerId && customerFormData) {
+      updateCustomer(formData.customerId, customerFormData);
+      setIsEditingCustomer(false);
+    }
+  };
 
   const filteredOrders = orders.filter(o => {
     const customer = customers.find(c => c.id === o.customerId);
@@ -89,7 +99,7 @@ export function Orders() {
         isWarranty: false,
         issueDescription: '',
         technicianNotes: '',
-        status: 'pending',
+        status: 'entrada',
         partsUsed: [],
         laborCost: 0,
       });
@@ -141,19 +151,51 @@ export function Orders() {
     return partsCost + formData.laborCost;
   };
 
+  const sendWhatsAppNotification = (phone: string, customerName: string, orderId: string, status: string) => {
+    // Only numbers
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) return;
+
+    let statusText = '';
+    switch (status) {
+      case 'entrada': statusText = 'Entrada (Recebido)'; break;
+      case 'diagnostico': statusText = 'Em Diagnóstico'; break;
+      case 'orcamento': statusText = 'Aguardando Aprovação de Orçamento'; break;
+      case 'aguarda_peca': statusText = 'A Aguardar Peça'; break;
+      case 'pronto': statusText = 'Pronto para Levantamento'; break;
+      case 'cancelado': statusText = 'Cancelado'; break;
+      default: statusText = status;
+    }
+
+    const message = `Olá, ${customerName}!\n\nO status da sua ordem de serviço ${orderId} foi atualizado para: *${statusText}*.\n\nQualquer dúvida, estamos ao dispor.`;
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    
+    // Open in a new tab
+    window.open(url, '_blank');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     const totalCost = calculateTotalCost();
 
     if (editingOrder) {
+      const statusChanged = formData.status !== editingOrder.status;
+
       updateOrder(editingOrder.id, {
         ...formData,
         totalCost,
-        completedAt: formData.status === 'completed' && editingOrder.status !== 'completed' 
+        completedAt: formData.status === 'pronto' && editingOrder.status !== 'pronto' 
           ? new Date().toISOString() 
           : editingOrder.completedAt,
       });
+
+      if (statusChanged) {
+        const customer = customers.find(c => c.id === formData.customerId);
+        if (customer && customer.phone) {
+          sendWhatsAppNotification(customer.phone, customer.name, editingOrder.id, formData.status);
+        }
+      }
     } else {
       const series = settings?.orderSeries || new Date().getFullYear().toString();
       let newId = `${series}-0001`;
@@ -172,17 +214,24 @@ export function Orders() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      
+      // We can also notify on creation
+      const customer = customers.find(c => c.id === formData.customerId);
+      if (customer && customer.phone) {
+        sendWhatsAppNotification(customer.phone, customer.name, newId, formData.status);
+      }
     }
     handleCloseModal();
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Pendente</span>;
-      case 'in_progress': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Em Curso</span>;
-      case 'waiting_parts': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
-      case 'completed': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Concluído</span>;
-      case 'canceled': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
+      case 'entrada': return <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">Entrada</span>;
+      case 'diagnostico': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Diagnóstico</span>;
+      case 'orcamento': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Orçamento</span>;
+      case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
+      case 'pronto': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pronto</span>;
+      case 'cancelado': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
       default: return null;
     }
   };
@@ -330,7 +379,18 @@ export function Orders() {
               <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Coluna Esquerda */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-slate-900 border-b pb-2">Dados do Cliente</h3>
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h3 className="font-medium text-slate-900">Dados do Cliente</h3>
+                    {pastCustomerOrders.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowHistoryModal('customer')}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
+                      >
+                        <Search className="h-3 w-3" /> Ver Histórico ({pastCustomerOrders.length})
+                      </button>
+                    )}
+                  </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
                     <select
@@ -449,7 +509,18 @@ export function Orders() {
                     </div>
                   )}
 
-                  <h3 className="font-medium text-slate-900 border-b pb-2 pt-4">Dados do Equipamento</h3>
+                  <div className="flex items-center justify-between border-b pb-2 pt-4">
+                    <h3 className="font-medium text-slate-900">Dados do Equipamento</h3>
+                    {pastDeviceOrders.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowHistoryModal('device')}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
+                      >
+                        <Search className="h-3 w-3" /> Ver Histórico ({pastDeviceOrders.length})
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-slate-700">Tipo</label>
@@ -556,11 +627,12 @@ export function Orders() {
                       onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="pending">Pendente</option>
-                      <option value="in_progress">Em Curso</option>
-                      <option value="waiting_parts">A Aguardar Peça</option>
-                      <option value="completed">Concluído</option>
-                      <option value="canceled">Cancelado</option>
+                      <option value="entrada">Entrada</option>
+                      <option value="diagnostico">Diagnóstico</option>
+                      <option value="orcamento">Orçamento</option>
+                      <option value="aguarda_peca">A Aguardar Peça</option>
+                      <option value="pronto">Pronto</option>
+                      <option value="cancelado">Cancelado</option>
                     </select>
                   </div>
 
@@ -672,6 +744,48 @@ export function Orders() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-bold text-slate-900">
+                Histórico de Reparações ({showHistoryModal === 'customer' ? 'Por Cliente' : 'Por Nº Série'})
+              </h2>
+              <button onClick={() => setShowHistoryModal(null)} className="rounded p-1 hover:bg-slate-100 text-slate-500">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-3">
+              {(showHistoryModal === 'customer' ? pastCustomerOrders : pastDeviceOrders).map(o => (
+                <div key={o.id} className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 transition-colors">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-bold text-slate-900">{o.id.toUpperCase()}</span>
+                    {getStatusBadge(o.status)}
+                  </div>
+                  <div className="text-sm text-slate-600 mb-1">
+                    <strong>Data:</strong> {format(new Date(o.createdAt), "dd/MM/yyyy", { locale: pt })}
+                  </div>
+                  <div className="text-sm text-slate-600 mb-1">
+                    <strong>Equipamento:</strong> {o.brand} {o.model} {o.serialNumber ? `(S/N: ${o.serialNumber})` : ''}
+                  </div>
+                  <div className="text-sm text-slate-600 mb-1">
+                    <strong>Avaria:</strong> {o.issueDescription}
+                  </div>
+                  {o.technicianNotes && (
+                    <div className="text-sm text-slate-600 mb-1 p-2 bg-slate-50 rounded border border-slate-100">
+                      <strong>Notas:</strong> {o.technicianNotes}
+                    </div>
+                  )}
+                  <div className="text-sm font-medium text-slate-900 mt-2 text-right">
+                    Total: {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(o.totalCost)}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

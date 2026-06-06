@@ -6,30 +6,42 @@ import { pt } from 'date-fns/locale';
 export function Dashboard() {
   const { orders, customers } = useStore();
 
-  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'waiting_parts').length;
-  const inProgressOrders = orders.filter(o => o.status === 'in_progress').length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
+  const pendingOrders = orders.filter(o => o.status === 'entrada' || o.status === 'diagnostico' || o.status === 'orcamento').length;
+  const inProgressOrders = orders.filter(o => o.status === 'aguarda_peca').length; // we could use something else, maybe no in_progress anymore
+  const completedOrders = orders.filter(o => o.status === 'pronto').length;
   
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
   const totalRevenue = orders
-    .filter(o => o.status === 'completed')
+    .filter(o => o.status === 'pronto')
+    .reduce((acc, order) => acc + order.totalCost, 0);
+
+  const monthlyRevenue = orders
+    .filter(o => {
+      if (o.status !== 'pronto') return false;
+      const orderDate = new Date(o.completedAt || o.updatedAt);
+      return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+    })
     .reduce((acc, order) => acc + order.totalCost, 0);
 
   const recentOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
   const stats = [
-    { name: 'OS Pendentes', value: pendingOrders, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
-    { name: 'Em Curso', value: inProgressOrders, icon: Wrench, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { name: 'Concluídas', value: completedOrders, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { name: 'Faturação Total', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalRevenue), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+    { name: 'Em Aberto', value: pendingOrders, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
+    { name: 'Prontas', value: completedOrders, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { name: 'Faturação (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyRevenue), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+    { name: 'Faturação Total', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalRevenue), icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-100' },
   ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Pendente</span>;
-      case 'in_progress': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Em Curso</span>;
-      case 'waiting_parts': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
-      case 'completed': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Concluído</span>;
-      case 'canceled': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
+      case 'entrada': return <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">Entrada</span>;
+      case 'diagnostico': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Diagnóstico</span>;
+      case 'orcamento': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Orçamento</span>;
+      case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
+      case 'pronto': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pronto</span>;
+      case 'cancelado': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
       default: return null;
     }
   };

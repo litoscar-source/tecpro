@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { Customer, InventoryItem, ServiceOrder, CompanySettings } from '../types';
+import { Customer, InventoryItem, ServiceOrder, CompanySettings, Appointment } from '../types';
 
 interface AppState {
   customers: Customer[];
   inventory: InventoryItem[];
   orders: ServiceOrder[];
+  appointments: Appointment[];
   settings: CompanySettings | null;
   isLoading: boolean;
   fetchData: () => Promise<void>;
@@ -17,6 +18,9 @@ interface AppState {
   addOrder: (order: ServiceOrder) => Promise<void>;
   updateOrder: (id: string, order: Partial<ServiceOrder>) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
+  addAppointment: (appointment: Appointment) => Promise<void>;
+  updateAppointment: (id: string, appointment: Partial<Appointment>) => Promise<void>;
+  deleteAppointment: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<CompanySettings>) => Promise<void>;
 }
 
@@ -24,24 +28,27 @@ export const useStore = create<AppState>()((set, get) => ({
   customers: [],
   inventory: [],
   orders: [],
+  appointments: [],
   settings: null,
   isLoading: true,
 
   fetchData: async () => {
     try {
-      const [customersRes, inventoryRes, ordersRes, settingsRes] = await Promise.all([
+      const [customersRes, inventoryRes, ordersRes, appointmentsRes, settingsRes] = await Promise.all([
         fetch('/api/customers'),
         fetch('/api/inventory'),
         fetch('/api/orders'),
+        fetch('/api/appointments'),
         fetch('/api/settings')
       ]);
       
       const customers = await customersRes.json();
       const inventory = await inventoryRes.json();
       const orders = await ordersRes.json();
+      const appointments = await appointmentsRes.json();
       const settings = await settingsRes.json();
 
-      set({ customers, inventory, orders, settings, isLoading: false });
+      set({ customers, inventory, orders, appointments, settings, isLoading: false });
     } catch (error) {
       console.error('Failed to fetch data', error);
       set({ isLoading: false });
@@ -123,6 +130,31 @@ export const useStore = create<AppState>()((set, get) => ({
     set((state) => ({ orders: state.orders.filter((o) => o.id !== id) }));
   },
   
+  addAppointment: async (appointment) => {
+    await fetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(appointment)
+    });
+    set((state) => ({ appointments: [...state.appointments, appointment] }));
+  },
+
+  updateAppointment: async (id, updatedAppointment) => {
+    await fetch(`/api/appointments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedAppointment)
+    });
+    set((state) => ({
+      appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...updatedAppointment } : a)),
+    }));
+  },
+
+  deleteAppointment: async (id) => {
+    await fetch(`/api/appointments/${id}`, { method: 'DELETE' });
+    set((state) => ({ appointments: state.appointments.filter((a) => a.id !== id) }));
+  },
+
   updateSettings: async (updatedSettings) => {
     await fetch('/api/settings', {
       method: 'PUT',

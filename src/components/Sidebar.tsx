@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wrench, Package, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Wrench, Package, Settings, LogOut, Calendar } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Ordens de Reparação', path: '/orders', icon: Wrench },
+  { name: 'Agenda', path: '/agenda', icon: Calendar },
   { name: 'Clientes', path: '/customers', icon: Users },
   { name: 'Stock', path: '/inventory', icon: Package },
   { name: 'Configurações', path: '/settings', icon: Settings },

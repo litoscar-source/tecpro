@@ -1,4 +1,4 @@
-export type OrderStatus = 'pending' | 'in_progress' | 'waiting_parts' | 'completed' | 'canceled';
+export type OrderStatus = 'entrada' | 'diagnostico' | 'orcamento' | 'aguarda_peca' | 'pronto' | 'cancelado';
 
 export interface Customer {
   id: string;
@@ -54,5 +54,16 @@ export interface CompanySettings {
   postalCode: string;
   logo?: string;
   orderSeries: string;
+}
+
+export interface Appointment {
+  id: string;
+  customerId: string;
+  title: string;
+  date: string;
+  time: string;
+  notes: string;
+  status: 'scheduled' | 'completed' | 'canceled';
+  createdAt: string;
 }
 
