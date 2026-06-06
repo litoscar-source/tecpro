@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "start": "NODE_ENV=production tsx server.ts",
-    "build": "vite build",
+    "start": "NODE_ENV=production node dist-server/server.js",
+    "build": "vite build && npm run build:server",
+    "build:server": "esbuild server.ts --platform=node --target=node18 --format=esm --outdir=dist-server --bundle --external:express --external:mysql2 --external:vite --external:cors --external:dotenv",
     "preview": "vite preview",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist dist-server",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "@types/node": "^22.14.0",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.28.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
