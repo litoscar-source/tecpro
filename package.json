@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "start": "NODE_ENV=production node dist-server/server.js",
+    "start": "NODE_ENV=production node server.js",
     "build": "vite build && npm run build:server",
-    "build:server": "esbuild server.ts --platform=node --target=node18 --format=esm --outdir=dist-server --bundle --external:express --external:mysql2 --external:vite --external:cors --external:dotenv",
+    "build:server": "esbuild server.ts --platform=node --target=node18 --format=esm --outfile=server.js --bundle --external:express --external:mysql2 --external:vite --external:cors --external:dotenv",
     "preview": "vite preview",
-    "clean": "rm -rf dist dist-server",
+    "clean": "rm -rf dist dist-server server.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
