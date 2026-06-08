@@ -42,13 +42,20 @@ export const useStore = create<AppState>()((set, get) => ({
         fetch('/api/settings')
       ]);
       
-      const customers = await customersRes.json();
-      const inventory = await inventoryRes.json();
-      const orders = await ordersRes.json();
-      const appointments = await appointmentsRes.json();
-      const settings = await settingsRes.json();
+      const customersData = customersRes.ok ? await customersRes.json() : [];
+      const inventoryData = inventoryRes.ok ? await inventoryRes.json() : [];
+      const ordersData = ordersRes.ok ? await ordersRes.json() : [];
+      const appointmentsData = appointmentsRes.ok ? await appointmentsRes.json() : [];
+      const settingsData = settingsRes.ok ? await settingsRes.json() : null;
 
-      set({ customers, inventory, orders, appointments, settings, isLoading: false });
+      set({ 
+        customers: Array.isArray(customersData) ? customersData : [], 
+        inventory: Array.isArray(inventoryData) ? inventoryData : [], 
+        orders: Array.isArray(ordersData) ? ordersData : [], 
+        appointments: Array.isArray(appointmentsData) ? appointmentsData : [], 
+        settings: settingsData?.error ? null : settingsData, 
+        isLoading: false 
+      });
     } catch (error) {
       console.error('Failed to fetch data', error);
       set({ isLoading: false });
