@@ -61,11 +61,11 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
       <div className="flex-1">
         {/* Header */}
       <div className="flex justify-between items-start pb-4 mb-4 border-b-2" style={{ borderColor: colors.slate800 }}>
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4" style={{ width: '100%' }}>
           {settings.logo && (
-            <img src={settings.logo} alt="Logótipo" className="h-12 w-12 object-contain" />
+            <img src={settings.logo} alt="Logótipo" style={{ maxHeight: '64px', maxWidth: '200px' }} />
           )}
-          <div>
+          <div style={{ flex: 1 }}>
             <h1 className="text-2xl font-bold" style={{ color: colors.slate900 }}>{settings.companyName}</h1>
             <p className="mt-1" style={{ color: colors.slate600 }}>{settings.legalName}</p>
             <div className="mt-1" style={{ color: colors.slate600 }}>

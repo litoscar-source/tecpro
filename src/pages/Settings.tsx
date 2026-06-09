@@ -19,8 +19,6 @@ export function Settings() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!settings) return null;
-
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {

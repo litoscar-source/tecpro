@@ -154,123 +154,125 @@ export function Agenda() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
-            <div className="border-b border-slate-200 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh] my-auto">
+            <div className="border-b border-slate-200 p-6 shrink-0">
               <h2 className="text-xl font-bold text-slate-900">
                 {editingAppointment ? 'Editar Marcação' : 'Nova Marcação'}
               </h2>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Título</label>
-                  <input
-                    required
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="Ex: Instalação de software"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
-                  <select
-                    required
-                    value={formData.customerId}
-                    onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="" disabled>Selecione um cliente</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+            <div className="overflow-y-auto p-6">
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Data</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Título</label>
                     <input
                       required
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Ex: Instalação de software"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
+                    <select
+                      required
+                      value={formData.customerId}
+                      onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="" disabled>Selecione um cliente</option>
+                      {customers.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Data</label>
+                      <input
+                        required
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Hora</label>
+                      <input
+                        required
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Estado</label>
+                    <select
+                      required
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="scheduled">Agendado</option>
+                      <option value="completed">Concluído</option>
+                      <option value="canceled">Cancelado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Notas Adicionais</label>
+                    <textarea
+                      rows={3}
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Hora</label>
-                    <input
-                      required
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
                 </div>
 
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Estado</label>
-                  <select
-                    required
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                  >
-                    <option value="scheduled">Agendado</option>
-                    <option value="completed">Concluído</option>
-                    <option value="canceled">Cancelado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Notas Adicionais</label>
-                  <textarea
-                    rows={3}
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                {editingAppointment && (
+                <div className="mt-6 flex justify-end gap-3 shrink-0">
+                  {editingAppointment && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm('Tem a certeza que deseja eliminar esta marcação?')) {
+                          deleteAppointment(editingAppointment.id);
+                          closeModal();
+                        }
+                      }}
+                      className="rounded-md px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none mr-auto"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm('Tem a certeza que deseja eliminar esta marcação?')) {
-                        deleteAppointment(editingAppointment.id);
-                        closeModal();
-                      }
-                    }}
-                    className="rounded-md px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none mr-auto"
+                    onClick={closeModal}
+                    className="rounded-md px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none"
                   >
-                    Eliminar
+                    Cancelar
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="rounded-md px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-                >
-                  {editingAppointment ? 'Guardar Alterações' : 'Criar Marcação'}
-                </button>
-              </div>
-            </form>
+                  <button
+                    type="submit"
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                  >
+                    {editingAppointment ? 'Guardar' : 'Criar'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
