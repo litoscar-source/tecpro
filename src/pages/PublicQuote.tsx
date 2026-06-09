@@ -77,7 +77,7 @@ export function PublicQuote() {
             </div>
           )}
           <h1 className="text-2xl font-bold text-slate-900">{settings.companyName}</h1>
-          <p className="text-slate-500 mt-1">Orçamento para Reparação</p>
+          <p className="text-slate-500 mt-1">{order.orderType === 'service' ? 'Orçamento de Serviço' : 'Orçamento para Reparação'}</p>
         </div>
 
         <div className="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
@@ -94,14 +94,14 @@ export function PublicQuote() {
 
           <div className="space-y-6">
             <div>
-              <h3 className="font-medium text-slate-900 mb-2">Equipamento</h3>
+              <h3 className="font-medium text-slate-900 mb-2">{order.orderType === 'service' ? 'Serviço/Equipamento' : 'Equipamento'}</h3>
               <p className="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                {order.brand} {order.model} {order.serialNumber ? `(${order.serialNumber})` : ''}
+                {order.orderType === 'service' && !order.brand ? 'Prestação de Serviço' : `${order.brand} ${order.model} ${order.serialNumber ? `(${order.serialNumber})` : ''}`}
               </p>
             </div>
 
             <div>
-              <h3 className="font-medium text-slate-900 mb-2">Diagnóstico / Avaria</h3>
+              <h3 className="font-medium text-slate-900 mb-2">{order.orderType === 'service' ? 'Descrição do Serviço' : 'Diagnóstico / Avaria'}</h3>
               <p className="text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
                 {order.issueDescription}
               </p>

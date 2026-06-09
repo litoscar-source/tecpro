@@ -32,6 +32,7 @@ export interface InventoryItem {
 export interface ServiceOrder {
   id: string;
   customerId: string;
+  orderType?: 'repair' | 'service'; // Reparação ou Serviço de assistência
   deviceType: string;
   brand: string;
   model: string;

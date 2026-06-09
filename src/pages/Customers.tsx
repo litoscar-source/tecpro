@@ -69,11 +69,14 @@ export function Customers() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Entrada</span>;
-      case 'in_progress': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Em Reparação</span>;
-      case 'waiting_parts': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">Orçamentado</span>;
-      case 'completed': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Reparado</span>;
-      case 'canceled': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
+      case 'entrada': return <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">Entrada</span>;
+      case 'diagnostico': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Em Diagnóstico</span>;
+      case 'orcamento': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Orçamento</span>;
+      case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar</span>;
+      case 'expedido': return <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">Expedido</span>;
+      case 'pronto': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pronto</span>;
+      case 'fechado': return <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600">Fechado</span>;
+      case 'cancelado': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
       default: return null;
     }
   };
@@ -295,7 +298,7 @@ export function Customers() {
           <div className="w-full max-w-4xl rounded-xl bg-white shadow-xl my-8 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-slate-100 p-4 sticky top-0 bg-white rounded-t-xl z-10 shrink-0">
               <h2 className="text-lg font-semibold text-slate-900">
-                Histórico de Reparações: {historyCustomer.name}
+                Histórico de Ocorrências: {historyCustomer.name}
               </h2>
               <button onClick={() => setHistoryCustomer(null)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
                 <X className="h-5 w-5" />
@@ -309,9 +312,9 @@ export function Customers() {
                 <table className="w-full text-left text-sm text-slate-600">
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
-                      <th className="px-4 py-3 font-medium">OS #</th>
-                      <th className="px-4 py-3 font-medium">Equipamento</th>
-                      <th className="px-4 py-3 font-medium">Avaria</th>
+                      <th className="px-4 py-3 font-medium">OS # / Tipo</th>
+                      <th className="px-4 py-3 font-medium">Equipamento/Serviço</th>
+                      <th className="px-4 py-3 font-medium">Descrição</th>
                       <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium">Valor Total</th>
                       <th className="px-4 py-3 font-medium">Data</th>
@@ -323,8 +326,11 @@ export function Customers() {
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                       .map((order) => (
                         <tr key={order.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium text-slate-900">{order.id.toUpperCase()}</td>
-                          <td className="px-4 py-3">{order.brand} {order.model}</td>
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            <div>{order.id.toUpperCase()}</div>
+                            <div className="text-[10px] text-slate-500 uppercase">{order.orderType === 'service' ? 'Serviço' : 'Reparação'}</div>
+                          </td>
+                          <td className="px-4 py-3">{order.orderType === 'service' && !order.brand ? '(Serviço)' : `${order.brand} ${order.model}`}</td>
                           <td className="px-4 py-3 truncate max-w-[200px]" title={order.issueDescription}>{order.issueDescription}</td>
                           <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
                           <td className="px-4 py-3 font-medium">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(order.totalCost)}</td>

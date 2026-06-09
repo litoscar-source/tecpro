@@ -28,9 +28,9 @@ const colors = {
 export function PrintDocument({ order, customer, inventory, settings, type }: PrintDocumentProps) {
   const getDocumentTitle = () => {
     switch (type) {
-      case 'entrada': return 'Folha de Reparação - Entrada';
-      case 'saida': return 'Folha de Reparação - Saída';
-      case 'orcamento': return 'Orçamento de Reparação';
+      case 'entrada': return order.orderType === 'service' ? 'Prestação de Serviços - Entrada' : 'Folha de Reparação - Entrada';
+      case 'saida': return order.orderType === 'service' ? 'Prestação de Serviços - Saída' : 'Folha de Reparação - Saída';
+      case 'orcamento': return order.orderType === 'service' ? 'Orçamento de Serviço' : 'Orçamento de Reparação';
     }
   };
 
@@ -107,21 +107,23 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
 
       {/* Device Info */}
       <div className="mb-4">
-        <h3 className="text-base font-bold pb-1 mb-2 uppercase border-b" style={{ borderColor: colors.slate300 }}>Dados do Equipamento</h3>
+        <h3 className="text-base font-bold pb-1 mb-2 uppercase border-b" style={{ borderColor: colors.slate300 }}>
+          {order.orderType === 'service' ? 'Detalhes do Serviço' : 'Dados do Equipamento'}
+        </h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p><span className="font-semibold">Equipamento:</span> {order.deviceType}</p>
-            <p><span className="font-semibold">Marca/Modelo:</span> {order.brand} {order.model}</p>
-            <p><span className="font-semibold">Estado:</span> {order.deviceCondition || 'N/A'}</p>
+            <p><span className="font-semibold">{order.orderType === 'service' ? 'Tipo de Serviço' : 'Equipamento'}:</span> {order.deviceType}</p>
+            {order.brand && <p><span className="font-semibold">Marca/Modelo:</span> {order.brand} {order.model}</p>}
+            {order.orderType !== 'service' && <p><span className="font-semibold">Estado:</span> {order.deviceCondition || 'N/A'}</p>}
           </div>
           <div>
-            <p><span className="font-semibold">Nº Série/IMEI:</span> {order.serialNumber || 'N/A'}</p>
-            <p><span className="font-semibold">Acessórios:</span> {order.accessories || 'Nenhum'}</p>
+            {order.orderType !== 'service' && <p><span className="font-semibold">Nº Série/IMEI:</span> {order.serialNumber || 'N/A'}</p>}
+            {order.orderType !== 'service' && <p><span className="font-semibold">Acessórios:</span> {order.accessories || 'Nenhum'}</p>}
             <p><span className="font-semibold">Garantia:</span> {order.isWarranty ? 'Sim' : 'Não'}</p>
           </div>
         </div>
         <div className="mt-2">
-          <p className="font-semibold">Avaria Reportada:</p>
+          <p className="font-semibold">{order.orderType === 'service' ? 'Descrição Reportada' : 'Avaria Reportada'}:</p>
           <div className="p-2 rounded mt-1 min-h-[40px] border" style={{ backgroundColor: colors.slate50, borderColor: colors.slate200 }}>
             {order.issueDescription}
           </div>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Search, Edit2, Trash2, X, Eye, Printer } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Eye, Printer, Tag } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { ServiceOrder, OrderStatus, Customer } from '../types';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { PrintDocument } from '../components/PrintDocument';
+import { PrintLabelModal } from '../components/PrintLabelModal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -23,9 +24,11 @@ export function Orders() {
 
   const [printData, setPrintData] = useState<{ order: ServiceOrder, type: 'entrada' | 'saida' | 'orcamento' } | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [labelOrder, setLabelOrder] = useState<ServiceOrder | null>(null);
 
   const [formData, setFormData] = useState({
     customerId: '',
+    orderType: 'repair' as 'repair' | 'service',
     deviceType: '',
     brand: '',
     model: '',
@@ -84,6 +87,7 @@ export function Orders() {
       setEditingOrder(order);
       setFormData({
         customerId: order.customerId,
+        orderType: order.orderType || 'repair',
         deviceType: order.deviceType,
         brand: order.brand,
         model: order.model,
@@ -108,6 +112,7 @@ export function Orders() {
       setEditingOrder(null);
       setFormData({
         customerId: '',
+        orderType: 'repair',
         deviceType: '',
         brand: '',
         model: '',
@@ -320,9 +325,9 @@ export function Orders() {
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-6 py-3 font-medium">OS #</th>
+                <th className="px-6 py-3 font-medium">OS # / Tipo</th>
                 <th className="px-6 py-3 font-medium">Cliente</th>
-                <th className="px-6 py-3 font-medium">Equipamento</th>
+                <th className="px-6 py-3 font-medium">Equipamento/Detalhe</th>
                 <th className="px-6 py-3 font-medium">Nº de Série</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium">Pagamento</th>
@@ -336,9 +341,12 @@ export function Orders() {
                 const customer = customers.find(c => c.id === order.customerId);
                 return (
                   <tr key={order.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium text-slate-900">{order.id.toUpperCase()}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      <div>{order.id.toUpperCase()}</div>
+                      <div className="text-[10px] text-slate-500 uppercase">{order.orderType === 'service' ? 'Serviço' : 'Reparação'}</div>
+                    </td>
                     <td className="px-6 py-4">{customer?.name || 'Desconhecido'}</td>
-                    <td className="px-6 py-4">{order.brand} {order.model}</td>
+                    <td className="px-6 py-4">{order.orderType === 'service' && !order.brand ? '(Serviço)' : `${order.brand} ${order.model}`}</td>
                     <td className="px-6 py-4">{order.serialNumber || '-'}</td>
                     <td className="px-6 py-4">{getStatusBadge(order.status)}</td>
                     <td className="px-6 py-4">
@@ -375,6 +383,15 @@ export function Orders() {
                             title="Imprimir Saída"
                           >
                             Saída
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1 mr-2 border-r border-slate-200 pr-2">
+                          <button
+                            onClick={() => setLabelOrder(order)}
+                            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600"
+                            title="Imprimir Etiqueta"
+                          >
+                            <Tag className="h-4 w-4" />
                           </button>
                         </div>
                         <button
@@ -427,6 +444,9 @@ export function Orders() {
                   </button>
                   <button type="button" onClick={() => handlePrint(editingOrder, 'saida')} className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
                     <Printer className="h-4 w-4" /> Saída
+                  </button>
+                  <button type="button" onClick={() => setLabelOrder(editingOrder)} className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors ml-2">
+                    <Tag className="h-4 w-4" /> Etiqueta
                   </button>
                 </div>
               )}
@@ -572,7 +592,7 @@ export function Orders() {
                   )}
 
                   <div className="flex items-center justify-between border-b pb-2 pt-4">
-                    <h3 className="font-medium text-slate-900">Dados do Equipamento</h3>
+                    <h3 className="font-medium text-slate-900">Tipo de Serviço & Equipamento</h3>
                     {pastDeviceOrders.length > 0 && (
                       <button
                         type="button"
@@ -583,11 +603,22 @@ export function Orders() {
                       </button>
                     )}
                   </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de Ordem</label>
+                    <select
+                      value={formData.orderType}
+                      onChange={(e) => setFormData({ ...formData, orderType: e.target.value as 'repair' | 'service' })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="repair">Ordem de Reparação</option>
+                      <option value="service">Prestação de Serviços</option>
+                    </select>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Tipo</label>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Tipo {formData.orderType === 'service' && '(Opcional)'}</label>
                       <input
-                        required
+                        required={formData.orderType === 'repair'}
                         type="text"
                         placeholder="Ex: Telemóvel"
                         value={formData.deviceType}
@@ -596,9 +627,9 @@ export function Orders() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Marca</label>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Marca {formData.orderType === 'service' && '(Opcional)'}</label>
                       <input
-                        required
+                        required={formData.orderType === 'repair'}
                         type="text"
                         placeholder="Ex: Apple"
                         value={formData.brand}
@@ -609,9 +640,9 @@ export function Orders() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Modelo</label>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Modelo {formData.orderType === 'service' && '(Opcional)'}</label>
                       <input
-                        required
+                        required={formData.orderType === 'repair'}
                         type="text"
                         placeholder="Ex: iPhone 13"
                         value={formData.model}
@@ -666,7 +697,7 @@ export function Orders() {
                   </div>
                   
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Avaria Reportada</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">{formData.orderType === 'service' ? 'Descrição do Serviço' : 'Avaria Reportada'}</label>
                     <textarea
                       required
                       value={formData.issueDescription}
@@ -1020,6 +1051,14 @@ export function Orders() {
             <p className="font-medium text-slate-900">A gerar PDF...</p>
           </div>
         </div>
+      )}
+
+      {labelOrder && (
+        <PrintLabelModal
+          order={labelOrder}
+          customerName={customers.find(c => c.id === labelOrder.customerId)?.name || 'Desconhecido'}
+          onClose={() => setLabelOrder(null)}
+        />
       )}
     </div>
   );

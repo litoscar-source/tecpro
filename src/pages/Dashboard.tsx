@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import { Users, Wrench, CheckCircle, Clock, DollarSign, Bell } from 'lucide-react';
+import { Users, Wrench, CheckCircle, Clock, DollarSign, Bell, AlertTriangle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -16,14 +16,40 @@ export function Dashboard() {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  // Obter orçamentos respondidos recentemente (nos últimos 3 dias)
   const recentQuoteResponses = [...orders].filter(o => {
     if (!o.clientQuoteStatus || !o.clientQuoteDate) return false;
     const date = new Date(o.clientQuoteDate);
     const diffTime = Math.abs(new Date().getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays <= 3;
-  }).sort((a, b) => new Date(b.clientQuoteDate!).getTime() - new Date(a.clientQuoteDate!).getTime());
+  });
+
+  const lowStockThreshold = 2;
+  const lowStockItems = inventory.filter(item => item.quantity <= lowStockThreshold);
+
+  const notifications = [
+    ...recentQuoteResponses.map(order => {
+      const customer = customers.find(c => c.id === order.customerId);
+      return {
+        id: `quote-${order.id}`,
+        type: 'quote',
+        title: `Orçamento ${order.clientQuoteStatus === 'accepted' ? 'Aceite' : 'Recusado'} - OS #${order.id.toUpperCase().substring(0,8)}`,
+        description: `Cliente: ${customer?.name}${order.clientQuoteObservation ? ` | Obs: "${order.clientQuoteObservation}"` : ''}`,
+        date: new Date(order.clientQuoteDate!),
+        status: order.clientQuoteStatus === 'accepted' ? 'success' : 'danger',
+        link: '/orders'
+      };
+    }),
+    ...lowStockItems.map(item => ({
+      id: `stock-${item.id}`,
+      type: 'stock',
+      title: `Aviso de Stock Pendente: ${item.name}`,
+      description: `Quantidade atual (${item.quantity} un.) é baixa.`,
+      date: new Date(item.createdAt || new Date()),
+      status: 'warning',
+      link: '/inventory'
+    }))
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   const totalRevenue = orders
     .filter(o => o.status === 'pronto' || o.status === 'fechado')
@@ -93,35 +119,36 @@ export function Dashboard() {
         <p className="text-sm text-slate-500">Visão geral da sua assistência técnica.</p>
       </div>
 
-      {recentQuoteResponses.length > 0 && (
-        <div className="bg-white border text-sm border-blue-200 rounded-xl shadow-sm overflow-hidden">
+      {notifications.length > 0 && (
+        <div className="bg-white border text-sm border-blue-200 rounded-xl shadow-sm overflow-hidden mb-6">
           <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex items-center gap-2">
             <Bell className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-blue-900">Notificações de Orçamentos ({recentQuoteResponses.length})</h3>
+            <h3 className="font-semibold text-blue-900">Central de Notificações ({notifications.length})</h3>
           </div>
-          <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
-            {recentQuoteResponses.map(order => {
-              const customer = customers.find(c => c.id === order.customerId);
-              return (
-                <div key={order.id} className="p-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="font-medium text-slate-900 mr-2">OS: {order.id.toUpperCase()}</span>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        order.clientQuoteStatus === 'accepted' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {order.clientQuoteStatus === 'accepted' ? 'Orçamento Aceite' : 'Orçamento Recusado'}
-                      </span>
-                      <p className="text-slate-600 mt-1">Cliente: {customer?.name}</p>
-                      {order.clientQuoteObservation && (
-                        <p className="text-slate-500 italic mt-1 text-xs">Obs: "{order.clientQuoteObservation}"</p>
-                      )}
+          <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+            {notifications.map(notif => (
+                <div key={notif.id} className="p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex gap-3">
+                      <div className="mt-0.5">
+                        {notif.status === 'success' && <CheckCircle className="h-5 w-5 text-emerald-500" />}
+                        {notif.status === 'warning' && <AlertTriangle className="h-5 w-5 text-amber-500" />}
+                        {notif.status === 'danger' && <XCircle className="h-5 w-5 text-red-500" />}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-slate-900">{notif.title}</h4>
+                        <p className="text-slate-600 mt-1">{notif.description}</p>
+                        <p className="text-xs text-slate-400 mt-2">
+                          {format(notif.date, "dd/MM/yyyy 'às' HH:mm", { locale: pt })}
+                        </p>
+                      </div>
                     </div>
-                    <Link to="/orders" className="text-blue-600 hover:text-blue-800 text-xs font-medium">Ver Encomenda</Link>
+                    <Link to={notif.link} className="text-blue-600 hover:text-blue-800 text-xs font-medium whitespace-nowrap">
+                      Ver Mais
+                    </Link>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </div>
         </div>
       )}
