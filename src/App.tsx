@@ -12,7 +12,7 @@ import { Inventory } from './pages/Inventory';
 import { Orders } from './pages/Orders';
 import { Settings } from './pages/Settings';
 import { Agenda } from './pages/Agenda';
-import { LoginScreen } from './components/LoginScreen';
+import { PinScreen } from './components/PinScreen';
 import { useStore } from './store/useStore';
 
 export default function App() {
@@ -28,11 +28,9 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <LoginScreen 
-        onSuccess={(token, user) => {
+      <PinScreen 
+        onSuccess={() => {
           sessionStorage.setItem('isAuthenticated', 'true');
-          sessionStorage.setItem('authToken', token);
-          sessionStorage.setItem('authUser', JSON.stringify(user));
           setIsAuthenticated(true);
         }} 
       />
