@@ -13,6 +13,10 @@ export function Inventory() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    brand: '',
+    model: '',
+    serialNumber: '',
+    color: '',
     quantity: 0,
     price: 0,
     cost: 0,
@@ -20,7 +24,10 @@ export function Inventory() {
 
   const filteredInventory = inventory.filter(i => 
     i.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    i.description.toLowerCase().includes(searchTerm.toLowerCase())
+    i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.brand || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleOpenModal = (item?: InventoryItem) => {
@@ -29,13 +36,17 @@ export function Inventory() {
       setFormData({
         name: item.name,
         description: item.description,
+        brand: item.brand || '',
+        model: item.model || '',
+        serialNumber: item.serialNumber || '',
+        color: item.color || '',
         quantity: item.quantity,
         price: item.price,
         cost: item.cost,
       });
     } else {
       setEditingItem(null);
-      setFormData({ name: '', description: '', quantity: 0, price: 0, cost: 0 });
+      setFormData({ name: '', description: '', brand: '', model: '', serialNumber: '', color: '', quantity: 0, price: 0, cost: 0 });
     }
     setIsModalOpen(true);
   };
@@ -105,6 +116,11 @@ export function Inventory() {
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4">
                     <div className="font-medium text-slate-900">{item.name}</div>
+                    {(item.brand || item.model || item.serialNumber) && (
+                      <div className="text-xs text-slate-600 mt-0.5">
+                        {[item.brand, item.model, item.serialNumber].filter(Boolean).join(' • ')}
+                      </div>
+                    )}
                     <div className="text-xs text-slate-500 truncate max-w-[200px]" title={item.description}>{item.description}</div>
                   </td>
                   <td className="px-6 py-4">
@@ -174,6 +190,48 @@ export function Inventory() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Marca</label>
+                  <input
+                    type="text"
+                    value={formData.brand}
+                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Modelo</label>
+                  <input
+                    type="text"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Cor</label>
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Número de Série</label>
+                  <input
+                    type="text"
+                    value={formData.serialNumber}
+                    onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               
               <div>

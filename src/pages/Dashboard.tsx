@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
 export function Dashboard() {
-  const { orders, customers } = useStore();
+  const { orders, customers, inventory } = useStore();
 
   const pendingOrders = orders.filter(o => o.status === 'entrada' || o.status === 'diagnostico' || o.status === 'orcamento').length;
   const inProgressOrders = orders.filter(o => o.status === 'aguarda_peca').length; // we could use something else, maybe no in_progress anymore
@@ -25,13 +25,29 @@ export function Dashboard() {
     })
     .reduce((acc, order) => acc + order.totalCost, 0);
 
+  const monthlyPartsCost = orders
+    .filter(o => {
+      if (o.status !== 'pronto') return false;
+      const orderDate = new Date(o.completedAt || o.updatedAt);
+      return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+    })
+    .reduce((acc, order) => {
+      const partsCost = order.partsUsed?.reduce((sum, part) => {
+        const item = inventory.find(i => i.id === part.partId);
+        return sum + (item ? (item.cost || 0) * part.quantity : 0);
+      }, 0) || 0;
+      return acc + partsCost;
+    }, 0);
+
+  const monthlyProfit = monthlyRevenue - monthlyPartsCost;
+
   const recentOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
   const stats = [
     { name: 'Em Aberto', value: pendingOrders, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
     { name: 'Prontas', value: completedOrders, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
     { name: 'Faturação (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyRevenue), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-    { name: 'Faturação Total', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalRevenue), icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { name: 'Lucro (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyProfit), icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
   ];
 
   const getStatusBadge = (status: string) => {

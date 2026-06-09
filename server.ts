@@ -7,6 +7,12 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import speakeasy from 'speakeasy';
+import qrcode from 'qrcode';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-phonelab-123';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +39,27 @@ async function startServer() {
   async function initDB() {
     try {
       await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id VARCHAR(255) PRIMARY KEY,
+          email VARCHAR(255) UNIQUE,
+          password VARCHAR(255),
+          twoFactorSecret VARCHAR(255),
+          isTwoFactorEnabled BOOLEAN DEFAULT FALSE,
+          createdAt VARCHAR(255)
+        )
+      `);
+      
+      const [userRows] = await pool.query('SELECT * FROM users');
+      if ((userRows as any[]).length === 0) {
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await pool.query(`
+          INSERT INTO users (id, email, password, isTwoFactorEnabled, createdAt)
+          VALUES (?, ?, ?, FALSE, ?)
+        `, ['admin-1', 'admin@phonelab.pt', hashedPassword, new Date().toISOString()]);
+      }
+
+      await pool.query(`
         CREATE TABLE IF NOT EXISTS settings (
           id INT PRIMARY KEY,
           companyName VARCHAR(255),
@@ -52,7 +79,7 @@ async function startServer() {
       if ((settingsRows as any[]).length === 0) {
         await pool.query(`
           INSERT INTO settings (id, companyName, legalName, nif, phone, email, address, city, postalCode, orderSeries)
-          VALUES (1, 'TechAssist Pro', 'TechAssist Soluções em TI Lda', '123456789', '210 000 000', 'geral@techassist.pt', 'Avenida da República, 1500', 'Lisboa', '1050-191', ?)
+          VALUES (1, 'PhoneLab Repair', 'PhoneLab Repair Lda', '123456789', '910 000 000', 'geral@phonelab.pt', 'Rua Principal, 1', 'Lisboa', '1000-001', ?)
         `, [new Date().getFullYear().toString()]);
       }
 
@@ -75,12 +102,24 @@ async function startServer() {
           id VARCHAR(255) PRIMARY KEY,
           name VARCHAR(255),
           description TEXT,
+          brand VARCHAR(255),
+          model VARCHAR(255),
+          serialNumber VARCHAR(255),
+          color VARCHAR(255),
           quantity INT,
           price DECIMAL(10,2),
           cost DECIMAL(10,2),
           createdAt VARCHAR(255)
         )
       `);
+
+      // Attempt to add new columns to inventory if they don't exist
+      try {
+        await pool.query('ALTER TABLE inventory ADD COLUMN brand VARCHAR(255)');
+        await pool.query('ALTER TABLE inventory ADD COLUMN model VARCHAR(255)');
+        await pool.query('ALTER TABLE inventory ADD COLUMN serialNumber VARCHAR(255)');
+        await pool.query('ALTER TABLE inventory ADD COLUMN color VARCHAR(255)');
+      } catch(e) {}
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS orders (
@@ -99,11 +138,23 @@ async function startServer() {
           partsUsed JSON,
           laborCost DECIMAL(10,2),
           totalCost DECIMAL(10,2),
+          partsDiscount DECIMAL(10,2),
+          paymentStatus VARCHAR(255),
+          paymentMethod VARCHAR(255),
+          paymentDate VARCHAR(255),
           createdAt VARCHAR(255),
           updatedAt VARCHAR(255),
           completedAt VARCHAR(255)
         )
       `);
+
+      // Attempt to add new columns to orders if they don't exist
+      try {
+        await pool.query('ALTER TABLE orders ADD COLUMN partsDiscount DECIMAL(10,2)');
+        await pool.query('ALTER TABLE orders ADD COLUMN paymentStatus VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN paymentMethod VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN paymentDate VARCHAR(255)');
+      } catch(e) {}
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS appointments (
@@ -128,6 +179,92 @@ async function startServer() {
   await initDB();
 
   // --- API ROUTES ---
+
+  // Auth
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password, token } = req.body;
+      const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+      const users = rows as any[];
+      
+      if (users.length === 0) {
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
+      }
+      
+      const user = users[0];
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
+      }
+
+      if (user.isTwoFactorEnabled) {
+        if (!token) {
+          return res.status(401).json({ error: 'Token 2FA obrigatório.', require2FA: true });
+        }
+        const verified = speakeasy.totp.verify({
+          secret: user.twoFactorSecret,
+          encoding: 'base32',
+          token
+        });
+        if (!verified) {
+          return res.status(401).json({ error: 'Token 2FA inválido.' });
+        }
+      }
+
+      const jwtToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
+      res.json({ token: jwtToken, user: { id: user.id, email: user.email } });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/setup-2fa', async (req, res) => {
+    try {
+      // In a real app we would verify the JWT here. 
+      // For this prototype, we'll just allow it if user provides email.
+      const { email } = req.body;
+      const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+      const users = rows as any[];
+      if (users.length === 0) return res.status(404).json({ error: 'User not found' });
+      const user = users[0];
+
+      const secret = speakeasy.generateSecret({ name: `PhoneLab (${email})` });
+      
+      await pool.query('UPDATE users SET twoFactorSecret = ? WHERE email = ?', [secret.base32, email]);
+
+      qrcode.toDataURL(secret.otpauth_url!, (err, data_url) => {
+        if (err) return res.status(500).json({ error: 'Error generating QR Code' });
+        res.json({ secret: secret.base32, qrCode: data_url });
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/auth/verify-2fa', async (req, res) => {
+    try {
+      const { email, token } = req.body;
+      const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+      const users = rows as any[];
+      if (users.length === 0) return res.status(404).json({ error: 'User not found' });
+      const user = users[0];
+
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: 'base32',
+        token
+      });
+
+      if (verified) {
+        await pool.query('UPDATE users SET isTwoFactorEnabled = TRUE WHERE email = ?', [email]);
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ error: 'Invalid token' });
+      }
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   app.get('/api/test-db', async (req, res) => {
     try {
@@ -205,10 +342,10 @@ async function startServer() {
 
   app.post('/api/inventory', async (req, res) => {
     try {
-      const { id, name, description, quantity, price, cost, createdAt } = req.body;
+      const { id, name, description, brand, model, serialNumber, color, quantity, price, cost, createdAt } = req.body;
       await pool.query(
-        'INSERT INTO inventory (id, name, description, quantity, price, cost, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [id, name, description, quantity, price, cost, createdAt]
+        'INSERT INTO inventory (id, name, description, brand, model, serialNumber, color, quantity, price, cost, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, name, description, brand, model, serialNumber, color, quantity, price, cost, createdAt]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -218,10 +355,10 @@ async function startServer() {
 
   app.put('/api/inventory/:id', async (req, res) => {
     try {
-      const { name, description, quantity, price, cost } = req.body;
+      const { name, description, brand, model, serialNumber, color, quantity, price, cost } = req.body;
       await pool.query(
-        'UPDATE inventory SET name=?, description=?, quantity=?, price=?, cost=? WHERE id=?',
-        [name, description, quantity, price, cost, req.params.id]
+        'UPDATE inventory SET name=?, description=?, brand=?, model=?, serialNumber=?, color=?, quantity=?, price=?, cost=? WHERE id=?',
+        [name, description, brand, model, serialNumber, color, quantity, price, cost, req.params.id]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -247,6 +384,7 @@ async function startServer() {
         isWarranty: !!r.isWarranty,
         laborCost: Number(r.laborCost),
         totalCost: Number(r.totalCost),
+        partsDiscount: Number(r.partsDiscount) || 0,
         partsUsed: typeof r.partsUsed === 'string' ? JSON.parse(r.partsUsed) : (r.partsUsed || [])
       }));
       res.json(formatted);
@@ -257,10 +395,10 @@ async function startServer() {
 
   app.post('/api/orders', async (req, res) => {
     try {
-      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, createdAt, updatedAt, completedAt } = req.body;
+      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt } = req.body;
       await pool.query(
-        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, createdAt, updatedAt, completedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, createdAt, updatedAt, completedAt]
+        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -270,10 +408,10 @@ async function startServer() {
 
   app.put('/api/orders/:id', async (req, res) => {
     try {
-      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, updatedAt, completedAt } = req.body;
+      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt } = req.body;
       await pool.query(
-        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, updatedAt=?, completedAt=? WHERE id=?',
-        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, updatedAt, completedAt, req.params.id]
+        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=? WHERE id=?',
+        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, req.params.id]
       );
       res.json({ success: true });
     } catch (e: any) {

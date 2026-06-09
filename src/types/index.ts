@@ -16,6 +16,10 @@ export interface InventoryItem {
   id: string;
   name: string;
   description: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
+  color?: string;
   quantity: number;
   price: number;
   cost: number;
@@ -36,8 +40,12 @@ export interface ServiceOrder {
   technicianNotes: string;
   status: OrderStatus;
   partsUsed: { partId: string; quantity: number }[];
+  partsDiscount?: number;
   laborCost: number;
   totalCost: number;
+  paymentStatus?: 'pendente' | 'pago' | 'cancelado' | string;
+  paymentMethod?: 'multibanco' | 'mbway' | 'dinheiro' | 'transferencia' | 'cartao' | string;
+  paymentDate?: string;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;

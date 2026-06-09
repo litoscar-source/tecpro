@@ -37,7 +37,13 @@ export function Orders() {
     status: 'entrada' as OrderStatus,
     partsUsed: [] as { partId: string; quantity: number }[],
     laborCost: 0,
+    partsDiscount: 0,
+    paymentStatus: 'pendente',
+    paymentMethod: '',
+    paymentDate: '',
   });
+
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
 
   const pastCustomerOrders = formData.customerId 
     ? orders.filter(o => o.customerId === formData.customerId && o.id !== editingOrder?.id)
@@ -83,9 +89,14 @@ export function Orders() {
         issueDescription: order.issueDescription,
         technicianNotes: order.technicianNotes,
         status: order.status,
-        partsUsed: order.partsUsed,
-        laborCost: order.laborCost,
+        partsUsed: order.partsUsed || [],
+        laborCost: order.laborCost || 0,
+        partsDiscount: order.partsDiscount || 0,
+        paymentStatus: order.paymentStatus || 'pendente',
+        paymentMethod: order.paymentMethod || '',
+        paymentDate: order.paymentDate || '',
       });
+      setSendWhatsApp(false); // Do not default true on edit
     } else {
       setEditingOrder(null);
       setFormData({
@@ -102,7 +113,12 @@ export function Orders() {
         status: 'entrada',
         partsUsed: [],
         laborCost: 0,
+        partsDiscount: 0,
+        paymentStatus: 'pendente',
+        paymentMethod: '',
+        paymentDate: '',
       });
+      setSendWhatsApp(true); // Default true on create
     }
     setIsModalOpen(true);
   };
@@ -146,9 +162,13 @@ export function Orders() {
   const calculateTotalCost = () => {
     const partsCost = formData.partsUsed.reduce((acc, part) => {
       const inventoryItem = inventory.find(i => i.id === part.partId);
-      return acc + (inventoryItem ? inventoryItem.price * part.quantity : 0);
+      return acc + (inventoryItem ? (inventoryItem.price || 0) * part.quantity : 0);
     }, 0);
-    return partsCost + formData.laborCost;
+    
+    // Apply discount
+    const discountedPartsCost = Math.max(0, partsCost - (formData.partsDiscount || 0));
+    
+    return discountedPartsCost + (formData.laborCost || 0);
   };
 
   const sendWhatsAppNotification = (phone: string, customerName: string, orderId: string, status: string) => {
@@ -190,7 +210,7 @@ export function Orders() {
           : editingOrder.completedAt,
       });
 
-      if (statusChanged) {
+      if (statusChanged && sendWhatsApp) {
         const customer = customers.find(c => c.id === formData.customerId);
         if (customer && customer.phone) {
           sendWhatsAppNotification(customer.phone, customer.name, editingOrder.id, formData.status);
@@ -216,9 +236,11 @@ export function Orders() {
       });
       
       // We can also notify on creation
-      const customer = customers.find(c => c.id === formData.customerId);
-      if (customer && customer.phone) {
-        sendWhatsAppNotification(customer.phone, customer.name, newId, formData.status);
+      if (sendWhatsApp) {
+        const customer = customers.find(c => c.id === formData.customerId);
+        if (customer && customer.phone) {
+          sendWhatsAppNotification(customer.phone, customer.name, newId, formData.status);
+        }
       }
     }
     handleCloseModal();
@@ -274,6 +296,7 @@ export function Orders() {
                 <th className="px-6 py-3 font-medium">Cliente</th>
                 <th className="px-6 py-3 font-medium">Equipamento</th>
                 <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium">Pagamento</th>
                 <th className="px-6 py-3 font-medium">Valor Total</th>
                 <th className="px-6 py-3 font-medium">Data</th>
                 <th className="px-6 py-3 font-medium text-right">Ações</th>
@@ -288,6 +311,15 @@ export function Orders() {
                     <td className="px-6 py-4">{customer?.name || 'Desconhecido'}</td>
                     <td className="px-6 py-4">{order.brand} {order.model}</td>
                     <td className="px-6 py-4">{getStatusBadge(order.status)}</td>
+                    <td className="px-6 py-4">
+                      {order.paymentStatus === 'pago' ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pago</span>
+                      ) : order.paymentStatus === 'cancelado' ? (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">Pendente</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 font-medium">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(order.totalCost)}</td>
                     <td className="px-6 py-4">{format(new Date(order.createdAt), "dd/MM/yyyy", { locale: pt })}</td>
                     <td className="px-6 py-4 text-right">
@@ -706,17 +738,85 @@ export function Orders() {
                     )}
                   </div>
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Mão de Obra (€)</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Mão de Obra (€)</label>
+                      <input
+                        required
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.laborCost}
+                        onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Desconto nas Peças (€)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.partsDiscount || 0}
+                        onChange={(e) => setFormData({ ...formData, partsDiscount: Number(e.target.value) })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200 my-4 pt-4">
+                    <h4 className="text-sm font-bold text-slate-900 mb-3">Pagamento</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Estado</label>
+                        <select
+                          value={formData.paymentStatus || 'pendente'}
+                          onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="pendente">Pendente</option>
+                          <option value="pago">Pago</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Meio</label>
+                        <select
+                          value={formData.paymentMethod || ''}
+                          onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Nenhum</option>
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="multibanco">Multibanco</option>
+                          <option value="mbway">MB Way</option>
+                          <option value="transferencia">Transferência</option>
+                          <option value="cartao">Cartão Crédito</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Data de Pagamento</label>
+                        <input
+                          type="date"
+                          value={formData.paymentDate || ''}
+                          onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 border-t border-slate-200 mt-4 pt-4">
                     <input
-                      required
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.laborCost}
-                      onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      type="checkbox"
+                      id="sendWhatsApp"
+                      checked={sendWhatsApp}
+                      onChange={(e) => setSendWhatsApp(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
+                    <label htmlFor="sendWhatsApp" className="text-sm font-medium text-slate-700">
+                      Enviar notificação por WhatsApp ao Guardar
+                    </label>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">

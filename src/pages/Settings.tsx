@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Settings as SettingsIcon, Save, Building, Phone, Mail, MapPin, Image as ImageIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Building, Phone, Mail, MapPin, Image as ImageIcon, Shield } from 'lucide-react';
 
 export function Settings() {
   const { settings, updateSettings } = useStore();
@@ -17,6 +17,12 @@ export function Settings() {
     orderSeries: settings?.orderSeries || new Date().getFullYear().toString(),
   });
 
+  const [qrCode, setQrCode] = useState('');
+  const [twoFactorToken, setTwoFactorToken] = useState('');
+  const [twoFactorStatus, setTwoFactorStatus] = useState('');
+
+  const userEmail = JSON.parse(sessionStorage.getItem('authUser') || '{}').email;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!settings) return null;
@@ -32,6 +38,44 @@ export function Settings() {
     }
   };
 
+  const handleSetup2FA = async () => {
+    try {
+      const res = await fetch('/api/auth/setup-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQrCode(data.qrCode);
+      } else {
+        alert(data.error);
+      }
+    } catch (e) {
+      alert('Erro ao configurar 2FA');
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    try {
+      const res = await fetch('/api/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, token: twoFactorToken })
+      });
+      if (res.ok) {
+        setTwoFactorStatus('2FA ativado com sucesso!');
+        setQrCode('');
+        setTwoFactorToken('');
+      } else {
+        const data = await res.json();
+        setTwoFactorStatus(data.error || 'Token inválido');
+      }
+    } catch (e) {
+      setTwoFactorStatus('Erro de conexão ao servidor.');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings(formData);
@@ -42,7 +86,56 @@ export function Settings() {
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
-        <p className="text-sm text-slate-500">Gerencie as informações da sua empresa.</p>
+        <p className="text-sm text-slate-500">Gerencie as informações da sua empresa e segurança.</p>
+      </div>
+
+      {/* Security Section */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex items-center gap-2">
+          <Shield className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-medium text-slate-900">Segurança</h2>
+        </div>
+        
+        <div className="p-6">
+          <p className="text-sm text-slate-600 mb-4">Adicione uma camada extra de segurança à sua conta ativando a Autenticação de 2 Fatores (2FA) com uma aplicação autenticadora como Google Authenticator ou Authy.</p>
+          
+          {!qrCode && (
+            <button
+              onClick={handleSetup2FA}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Configurar 2FA
+            </button>
+          )}
+
+          {qrCode && (
+            <div className="mt-4 p-4 border border-blue-100 bg-blue-50 rounded-lg flex flex-col items-start gap-4">
+              <p className="text-sm font-medium text-slate-800">1. Digitalize este QR Code com o seu Autenticador:</p>
+              <img src={qrCode} alt="2FA QR Code" className="w-48 h-48 bg-white p-2 rounded-lg" />
+              
+              <div className="w-full">
+                <p className="text-sm font-medium text-slate-800 mb-2">2. Introduza o código gerado pela aplicação:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="000000"
+                    maxLength={6}
+                    value={twoFactorToken}
+                    onChange={(e) => setTwoFactorToken(e.target.value)}
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 font-mono tracking-widest w-32 text-center"
+                  />
+                  <button
+                    onClick={handleVerify2FA}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Ativar e Verificar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {twoFactorStatus && <p className="mt-4 text-sm font-medium text-emerald-600">{twoFactorStatus}</p>}
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">

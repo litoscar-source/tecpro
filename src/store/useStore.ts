@@ -48,12 +48,26 @@ export const useStore = create<AppState>()((set, get) => ({
       const appointmentsData = appointmentsRes.ok ? await appointmentsRes.json() : [];
       const settingsData = settingsRes.ok ? await settingsRes.json() : null;
 
+      // Handle the case where the API returns an empty object {} instead of an error or actual settings
+      const settingsValid = settingsData && !settingsData.error && Object.keys(settingsData).length > 0;
+
       set({ 
         customers: Array.isArray(customersData) ? customersData : [], 
         inventory: Array.isArray(inventoryData) ? inventoryData : [], 
         orders: Array.isArray(ordersData) ? ordersData : [], 
         appointments: Array.isArray(appointmentsData) ? appointmentsData : [], 
-        settings: settingsData?.error ? null : settingsData, 
+        settings: settingsValid ? settingsData : {
+          companyName: 'PhoneLab Repair',
+          legalName: 'PhoneLab Repair Lda',
+          nif: '',
+          phone: '',
+          email: '',
+          address: '',
+          city: '',
+          postalCode: '',
+          logo: null,
+          orderSeries: new Date().getFullYear().toString()
+        }, 
         isLoading: false 
       });
     } catch (error) {
