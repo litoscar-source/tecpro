@@ -122,18 +122,22 @@ async function startServer() {
       `);
 
       // Attempt to add new columns to orders if they don't exist
-      try {
-        await pool.query('ALTER TABLE orders ADD COLUMN partsDiscount DECIMAL(10,2)');
-        await pool.query('ALTER TABLE orders ADD COLUMN paymentStatus VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN paymentMethod VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN paymentDate VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN orderType VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteStatus VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteObservation TEXT');
-        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteDate VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN externalSupplier VARCHAR(255)');
-        await pool.query('ALTER TABLE orders ADD COLUMN externalDispatchDate VARCHAR(255)');
-      } catch(e) {}
+      const orderColumns = [
+        'ALTER TABLE orders ADD COLUMN partsDiscount DECIMAL(10,2)',
+        'ALTER TABLE orders ADD COLUMN paymentStatus VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN paymentMethod VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN paymentDate VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN orderType VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN clientQuoteStatus VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN clientQuoteObservation TEXT',
+        'ALTER TABLE orders ADD COLUMN clientQuoteDate VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN externalSupplier VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN externalDispatchDate VARCHAR(255)'
+      ];
+
+      for (const colQuery of orderColumns) {
+        try { await pool.query(colQuery); } catch(e) {}
+      }
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS appointments (

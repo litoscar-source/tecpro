@@ -5,7 +5,7 @@ import { Building2, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 export function PublicQuote() {
   const { id } = useParams<{ id: string }>();
-  const { orders, customers, settings, updateOrder, inventory } = useStore();
+  const { orders, customers, settings, updateOrder, inventory, isLoading } = useStore();
   const [observation, setObservation] = useState('');
   
   const order = orders.find(o => o.id === id);
@@ -16,12 +16,20 @@ export function PublicQuote() {
     // Given the local architecture, we read from SQLite via the store.
   }, [id]);
 
-  if (!order || !customer || !settings) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    );
+  }
+
+  if (!order || !settings) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl shadow-sm text-center max-w-sm w-full">
           <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-slate-900">Orçamento não encontrado</h2>
+          <h2 className="text-lg font-medium text-slate-900">Documento não encontrado</h2>
           <p className="text-slate-500 mt-2">Verifique o link ou contacte-nos para mais informações.</p>
         </div>
       </div>
@@ -87,8 +95,8 @@ export function PublicQuote() {
               <p className="text-sm text-slate-500 mt-1">{new Date(order.createdAt).toLocaleDateString('pt-PT')}</p>
             </div>
             <div className="text-right">
-              <p className="font-medium text-slate-900">{customer.name}</p>
-              <p className="text-sm text-slate-500">{customer.phone}</p>
+              <p className="font-medium text-slate-900">{customer?.name || 'Cliente Removido'}</p>
+              <p className="text-sm text-slate-500">{customer?.phone || ''}</p>
             </div>
           </div>
 
