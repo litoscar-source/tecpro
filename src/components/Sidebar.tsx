@@ -21,7 +21,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
       <div className="flex h-16 shrink-0 items-center justify-between px-4 md:justify-center border-b border-slate-800">
         <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-400">
           <Wrench className="h-6 w-6 shrink-0" />
-          <span className="truncate">TechAssist Pro</span>
+          <span className="truncate">PHONELAB repair</span>
         </div>
         {onCloseMobile && (
           <button onClick={onCloseMobile} className="md:hidden p-1 text-slate-400 hover:text-white rounded-md">

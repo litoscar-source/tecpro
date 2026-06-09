@@ -20,6 +20,9 @@ export function Inventory() {
     quantity: 0,
     price: 0,
     cost: 0,
+    supplier: '',
+    purchaseInvoice: '',
+    purchaseDate: '',
   });
 
   const filteredInventory = inventory.filter(i => 
@@ -43,10 +46,13 @@ export function Inventory() {
         quantity: item.quantity,
         price: item.price,
         cost: item.cost,
+        supplier: item.supplier || '',
+        purchaseInvoice: item.purchaseInvoice || '',
+        purchaseDate: item.purchaseDate || '',
       });
     } else {
       setEditingItem(null);
-      setFormData({ name: '', description: '', brand: '', model: '', serialNumber: '', color: '', quantity: 0, price: 0, cost: 0 });
+      setFormData({ name: '', description: '', brand: '', model: '', serialNumber: '', color: '', quantity: 0, price: 0, cost: 0, supplier: '', purchaseInvoice: '', purchaseDate: '' });
     }
     setIsModalOpen(true);
   };
@@ -170,7 +176,7 @@ export function Inventory() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh] my-auto">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh] my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 p-4 shrink-0">
               <h2 className="text-lg font-semibold text-slate-900">
                 {editingItem ? 'Editar Item' : 'Novo Item'}
@@ -235,14 +241,36 @@ export function Inventory() {
                   </div>
                 </div>
                 
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Descrição</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    rows={2}
-                  />
+                <h3 className="font-semibold text-slate-900 border-b border-slate-100 pb-2 mt-6">Informação de Compra & Preços</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Fornecedor</label>
+                    <input
+                      type="text"
+                      value={formData.supplier}
+                      onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Fatura de Compra</label>
+                    <input
+                      type="text"
+                      value={formData.purchaseInvoice}
+                      onChange={(e) => setFormData({ ...formData, purchaseInvoice: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Data de Compra</label>
+                    <input
+                      type="date"
+                      value={formData.purchaseDate}
+                      onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -258,7 +286,7 @@ export function Inventory() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Custo (€)</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Custo Unitário (€)</label>
                     <input
                       required
                       type="number"
@@ -270,7 +298,7 @@ export function Inventory() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Preço (€)</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Preço de Venda (€)</label>
                     <input
                       required
                       type="number"
@@ -281,6 +309,16 @@ export function Inventory() {
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Descrição/Observações</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    rows={2}
+                  />
                 </div>
                 
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 shrink-0">

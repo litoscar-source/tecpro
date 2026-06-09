@@ -2,24 +2,26 @@ import { useStore } from '../store/useStore';
 import { Users, Wrench, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 export function Dashboard() {
   const { orders, customers, inventory } = useStore();
 
   const pendingOrders = orders.filter(o => o.status === 'entrada' || o.status === 'diagnostico' || o.status === 'orcamento').length;
-  const inProgressOrders = orders.filter(o => o.status === 'aguarda_peca').length; // we could use something else, maybe no in_progress anymore
+  const inProgressOrders = orders.filter(o => o.status === 'aguarda_peca' || o.status === 'expedido').length;
   const completedOrders = orders.filter(o => o.status === 'pronto').length;
+  const closedOrders = orders.filter(o => o.status === 'fechado').length;
   
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   const totalRevenue = orders
-    .filter(o => o.status === 'pronto')
+    .filter(o => o.status === 'pronto' || o.status === 'fechado')
     .reduce((acc, order) => acc + order.totalCost, 0);
 
   const monthlyRevenue = orders
     .filter(o => {
-      if (o.status !== 'pronto') return false;
+      if (o.status !== 'pronto' && o.status !== 'fechado') return false;
       const orderDate = new Date(o.completedAt || o.updatedAt);
       return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
     })
@@ -27,7 +29,7 @@ export function Dashboard() {
 
   const monthlyPartsCost = orders
     .filter(o => {
-      if (o.status !== 'pronto') return false;
+      if (o.status !== 'pronto' && o.status !== 'fechado') return false;
       const orderDate = new Date(o.completedAt || o.updatedAt);
       return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
     })
@@ -41,26 +43,38 @@ export function Dashboard() {
 
   const monthlyProfit = monthlyRevenue - monthlyPartsCost;
 
-  const recentOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
-
-  const stats = [
-    { name: 'Em Aberto', value: pendingOrders, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
-    { name: 'Prontas', value: completedOrders, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { name: 'Faturação (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyRevenue), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-    { name: 'Lucro (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyProfit), icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-  ];
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'entrada': return <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">Entrada</span>;
       case 'diagnostico': return <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Diagnóstico</span>;
       case 'orcamento': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Orçamento</span>;
-      case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
+      case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar</span>;
+      case 'expedido': return <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">Expedido</span>;
       case 'pronto': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pronto</span>;
+      case 'fechado': return <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600">Fechado</span>;
       case 'cancelado': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
       default: return null;
     }
   };
+
+  // Prepara dados do gráfico de equipamento
+  const deviceCounts = orders.reduce((acc, order) => {
+    const type = order.deviceType || 'Outro';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const deviceData = Object.entries(deviceCounts).map(([name, value]) => ({ name, value }));
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'];
+
+  const recentOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
+
+  const stats = [
+    { name: 'Em Aberto', value: pendingOrders + inProgressOrders, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
+    { name: 'Prontas', value: completedOrders, icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { name: 'Fechadas', value: closedOrders, icon: Wrench, color: 'text-slate-600', bg: 'bg-slate-100' },
+    { name: 'Faturação (Mês)', value: new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(monthlyRevenue), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -125,16 +139,37 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="col-span-1 rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="col-span-1 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col">
           <div className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-medium text-slate-900">Resumo de Clientes</h2>
+            <h2 className="text-lg font-medium text-slate-900">Reparações por Equipamento</h2>
           </div>
-          <div className="p-6 flex flex-col items-center justify-center h-64">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 text-blue-600 mb-4">
-              <Users className="h-10 w-10" />
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{customers.length}</p>
-            <p className="text-sm text-slate-500 mt-1">Clientes Cadastrados</p>
+          <div className="p-6 flex-1 h-64">
+            {deviceData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={deviceData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {deviceData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} un.`, 'Quantidade']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-500">
+                <Wrench className="h-10 w-10 mb-4 opacity-20" />
+                <p>Sem dados suficientes</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

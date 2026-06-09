@@ -12,6 +12,7 @@ import { Inventory } from './pages/Inventory';
 import { Orders } from './pages/Orders';
 import { Settings } from './pages/Settings';
 import { Agenda } from './pages/Agenda';
+import { PublicQuote } from './pages/PublicQuote';
 import { PinScreen } from './components/PinScreen';
 import { useStore } from './store/useStore';
 
@@ -26,7 +27,9 @@ export default function App() {
     return sessionStorage.getItem('isAuthenticated') === 'true';
   });
 
-  if (!isAuthenticated) {
+  const isPublicRoute = window.location.pathname.startsWith('/quote/');
+
+  if (!isAuthenticated && !isPublicRoute) {
     return (
       <PinScreen 
         onSuccess={() => {
@@ -48,6 +51,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/quote/:id" element={<PublicQuote />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="orders" element={<Orders />} />

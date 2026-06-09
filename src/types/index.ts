@@ -1,4 +1,4 @@
-export type OrderStatus = 'entrada' | 'diagnostico' | 'orcamento' | 'aguarda_peca' | 'pronto' | 'cancelado';
+export type OrderStatus = 'entrada' | 'diagnostico' | 'orcamento' | 'aguarda_peca' | 'pronto' | 'expedido' | 'fechado' | 'cancelado';
 
 export interface Customer {
   id: string;
@@ -23,6 +23,9 @@ export interface InventoryItem {
   quantity: number;
   price: number;
   cost: number;
+  supplier?: string;
+  purchaseInvoice?: string;
+  purchaseDate?: string;
   createdAt: string;
 }
 
@@ -39,6 +42,10 @@ export interface ServiceOrder {
   issueDescription: string;
   technicianNotes: string;
   status: OrderStatus;
+  externalSupplier?: string;
+  externalDispatchDate?: string;
+  clientQuoteStatus?: 'pending' | 'accepted' | 'rejected';
+  clientQuoteObservation?: string;
   partsUsed: { partId: string; quantity: number }[];
   partsDiscount?: number;
   laborCost: number;

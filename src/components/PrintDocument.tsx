@@ -137,7 +137,7 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
           
           {order.technicianNotes && (
             <div className="mb-3">
-              <p className="font-semibold">Notas Técnicas:</p>
+              <p className="font-semibold">Relatório Técnico:</p>
               <div className="p-2 rounded mt-1 min-h-[40px] border" style={{ backgroundColor: colors.slate50, borderColor: colors.slate200 }}>
                 {order.technicianNotes}
               </div>

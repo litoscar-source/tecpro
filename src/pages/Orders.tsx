@@ -12,6 +12,7 @@ import jsPDF from 'jspdf';
 export function Orders() {
   const { orders, customers, inventory, settings, addOrder, updateOrder, deleteOrder, updateCustomer } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<ServiceOrder | null>(null);
   
@@ -35,6 +36,8 @@ export function Orders() {
     issueDescription: '',
     technicianNotes: '',
     status: 'entrada' as OrderStatus,
+    externalSupplier: '',
+    externalDispatchDate: '',
     partsUsed: [] as { partId: string; quantity: number }[],
     laborCost: 0,
     partsDiscount: 0,
@@ -71,7 +74,9 @@ export function Orders() {
   const filteredOrders = orders.filter(o => {
     const customer = customers.find(c => c.id === o.customerId);
     const searchStr = `${o.id} ${customer?.name} ${o.brand} ${o.model} ${o.serialNumber}`.toLowerCase();
-    return searchStr.includes(searchTerm.toLowerCase());
+    const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === '' || o.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const handleOpenModal = (order?: ServiceOrder) => {
@@ -89,6 +94,8 @@ export function Orders() {
         issueDescription: order.issueDescription,
         technicianNotes: order.technicianNotes,
         status: order.status,
+        externalSupplier: order.externalSupplier || '',
+        externalDispatchDate: order.externalDispatchDate || '',
         partsUsed: order.partsUsed || [],
         laborCost: order.laborCost || 0,
         partsDiscount: order.partsDiscount || 0,
@@ -96,7 +103,7 @@ export function Orders() {
         paymentMethod: order.paymentMethod || '',
         paymentDate: order.paymentDate || '',
       });
-      setSendWhatsApp(false); // Do not default true on edit
+      setSendWhatsApp(false);
     } else {
       setEditingOrder(null);
       setFormData({
@@ -111,6 +118,8 @@ export function Orders() {
         issueDescription: '',
         technicianNotes: '',
         status: 'entrada',
+        externalSupplier: '',
+        externalDispatchDate: '',
         partsUsed: [],
         laborCost: 0,
         partsDiscount: 0,
@@ -118,7 +127,7 @@ export function Orders() {
         paymentMethod: '',
         paymentDate: '',
       });
-      setSendWhatsApp(true); // Default true on create
+      setSendWhatsApp(true);
     }
     setIsModalOpen(true);
   };
@@ -253,6 +262,8 @@ export function Orders() {
       case 'orcamento': return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Orçamento</span>;
       case 'aguarda_peca': return <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">A Aguardar Peça</span>;
       case 'pronto': return <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800">Pronto</span>;
+      case 'expedido': return <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">Expedido</span>;
+      case 'fechado': return <span className="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-600">Fechado</span>;
       case 'cancelado': return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Cancelado</span>;
       default: return null;
     }
@@ -275,8 +286,8 @@ export function Orders() {
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-4">
-          <div className="relative max-w-md">
+        <div className="border-b border-slate-200 p-4 flex flex-col sm:flex-row gap-4">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -285,6 +296,23 @@ export function Orders() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Todos os Estados</option>
+              <option value="entrada">Entrada</option>
+              <option value="diagnostico">Diagnóstico</option>
+              <option value="orcamento">Orçamento</option>
+              <option value="aguarda_peca">A Aguardar Peça</option>
+              <option value="expedido">Expedido p/ Fornecedor</option>
+              <option value="pronto">Pronto</option>
+              <option value="fechado">Fechado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
           </div>
         </div>
         
@@ -295,6 +323,7 @@ export function Orders() {
                 <th className="px-6 py-3 font-medium">OS #</th>
                 <th className="px-6 py-3 font-medium">Cliente</th>
                 <th className="px-6 py-3 font-medium">Equipamento</th>
+                <th className="px-6 py-3 font-medium">Nº de Série</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium">Pagamento</th>
                 <th className="px-6 py-3 font-medium">Valor Total</th>
@@ -310,6 +339,7 @@ export function Orders() {
                     <td className="px-6 py-4 font-medium text-slate-900">{order.id.toUpperCase()}</td>
                     <td className="px-6 py-4">{customer?.name || 'Desconhecido'}</td>
                     <td className="px-6 py-4">{order.brand} {order.model}</td>
+                    <td className="px-6 py-4">{order.serialNumber || '-'}</td>
                     <td className="px-6 py-4">{getStatusBadge(order.status)}</td>
                     <td className="px-6 py-4">
                       {order.paymentStatus === 'pago' ? (
@@ -663,13 +693,55 @@ export function Orders() {
                       <option value="diagnostico">Diagnóstico</option>
                       <option value="orcamento">Orçamento</option>
                       <option value="aguarda_peca">A Aguardar Peça</option>
+                      <option value="expedido">Expedido p/ Fornecedor</option>
                       <option value="pronto">Pronto</option>
+                      <option value="fechado">Fechado</option>
                       <option value="cancelado">Cancelado</option>
                     </select>
+
+                    {formData.status === 'expedido' && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-indigo-900">Fornecedor Externo</label>
+                          <input
+                            type="text"
+                            value={formData.externalSupplier}
+                            onChange={(e) => setFormData({ ...formData, externalSupplier: e.target.value })}
+                            className="w-full rounded-md border border-indigo-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 bg-white"
+                            placeholder="Nome do fornecedor"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-indigo-900">Data de Expedição</label>
+                          <input
+                            type="date"
+                            value={formData.externalDispatchDate}
+                            onChange={(e) => setFormData({ ...formData, externalDispatchDate: e.target.value })}
+                            className="w-full rounded-md border border-indigo-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 bg-white"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
+                  {editingOrder && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${window.location.origin}/quote/${editingOrder.id}`;
+                          navigator.clipboard.writeText(url);
+                          alert('Link do orçamento copiado para a área de transferência!');
+                        }}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition-colors w-full text-center border border-blue-200"
+                      >
+                        Copiar Link para o Cliente (Orçamento)
+                      </button>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Notas do Técnico</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Relatório Técnico</label>
                     <textarea
                       value={formData.technicianNotes}
                       onChange={(e) => setFormData({ ...formData, technicianNotes: e.target.value })}
@@ -828,20 +900,45 @@ export function Orders() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-3 p-6 sm:p-8 border-t border-slate-100 bg-slate-50">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="rounded-lg px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
-                >
-                  Guardar Reparação
-                </button>
+              <div className="flex justify-between items-center p-6 sm:p-8 border-t border-slate-100 bg-slate-50">
+                <div>
+                  {editingOrder && formData.status !== 'fechado' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Tem a certeza que deseja fechar esta reparação?")) {
+                          const totalCost = calculateTotalCost();
+                          updateOrder(editingOrder.id, {
+                            ...formData,
+                            status: 'fechado',
+                            totalCost,
+                            completedAt: editingOrder.completedAt || new Date().toISOString()
+                          });
+                          setIsModalOpen(false);
+                          setEditingOrder(null);
+                        }
+                      }}
+                      className="rounded-lg bg-slate-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-slate-700 transition-colors shadow-sm"
+                    >
+                      Fechar Reparação
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="rounded-lg px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    Guardar Reparação
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -877,7 +974,7 @@ export function Orders() {
                   </div>
                   {o.technicianNotes && (
                     <div className="text-sm text-slate-600 mb-1 p-2 bg-slate-50 rounded border border-slate-100">
-                      <strong>Notas:</strong> {o.technicianNotes}
+                      <strong>Relatório de Reparação:</strong> {o.technicianNotes}
                     </div>
                   )}
                   <div className="text-sm font-medium text-slate-900 mt-2 text-right">
