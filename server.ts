@@ -80,7 +80,7 @@ async function startServer() {
           address VARCHAR(255),
           city VARCHAR(255),
           postalCode VARCHAR(255),
-          logo LONGTEXT,
+          logo TEXT,
           orderSeries VARCHAR(255)
         )
       `);
@@ -145,7 +145,7 @@ async function startServer() {
           issueDescription TEXT,
           technicianNotes TEXT,
           status VARCHAR(255),
-          partsUsed JSON,
+          partsUsed TEXT,
           laborCost DECIMAL(10,2),
           totalCost DECIMAL(10,2),
           partsDiscount DECIMAL(10,2),
@@ -395,7 +395,7 @@ async function startServer() {
         laborCost: Number(r.laborCost),
         totalCost: Number(r.totalCost),
         partsDiscount: Number(r.partsDiscount) || 0,
-        partsUsed: typeof r.partsUsed === 'string' ? JSON.parse(r.partsUsed) : (r.partsUsed || [])
+        partsUsed: typeof r.partsUsed === 'string' ? TEXT.parse(r.partsUsed) : (r.partsUsed || [])
       }));
       res.json(formatted);
     } catch (e: any) {
@@ -408,7 +408,7 @@ async function startServer() {
       const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt } = req.body;
       await pool.query(
         'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt]
+        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, TEXT.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -421,7 +421,7 @@ async function startServer() {
       const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt } = req.body;
       await pool.query(
         'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=? WHERE id=?',
-        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, req.params.id]
+        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, TEXT.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, req.params.id]
       );
       res.json({ success: true });
     } catch (e: any) {

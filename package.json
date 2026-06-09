@@ -36,6 +36,8 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.13.2",
     "speakeasy": "^2.0.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1",
     "tailwind-merge": "^3.5.0",
     "uuid": "^14.0.0",
     "vite": "^6.2.0",
