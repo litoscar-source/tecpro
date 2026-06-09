@@ -397,6 +397,86 @@ async function startServer() {
     }
   });
 
+  // DB Backup & Restore
+  app.get('/api/backup-db', async (req, res) => {
+    try {
+      const [customers] = await pool.query('SELECT * FROM customers');
+      const [inventory] = await pool.query('SELECT * FROM inventory');
+      const [orders] = await pool.query('SELECT * FROM orders');
+      const [appointments] = await pool.query('SELECT * FROM appointments');
+      
+      const [settingsRows] = await pool.query('SELECT * FROM settings WHERE id = 1');
+      const settings = (settingsRows as any[])[0] || {};
+      
+      const backupData = {
+        customers,
+        inventory,
+        orders,
+        appointments,
+        settings
+      };
+      
+      res.json(backupData);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/restore-db', async (req, res) => {
+    try {
+      const { customers, inventory, orders, appointments, settings } = req.body;
+
+      if (!customers || !inventory || !orders || !appointments) {
+        return res.status(400).json({ error: 'Formato de base de dados inválido.' });
+      }
+
+      await pool.query('DELETE FROM customers');
+      await pool.query('DELETE FROM inventory');
+      await pool.query('DELETE FROM orders');
+      await pool.query('DELETE FROM appointments');
+
+      for (const c of customers) {
+        await pool.query(
+          'INSERT INTO customers (id, name, email, phone, nif, address, postalCode, city, createdAt) VALUES (?,?,?,?,?,?,?,?,?)',
+          [c.id, c.name, c.email, c.phone, c.nif, c.address, c.postalCode, c.city, c.createdAt]
+        );
+      }
+
+      for (const i of inventory) {
+        await pool.query(
+          'INSERT INTO inventory (id, name, description, brand, model, serialNumber, color, quantity, price, cost, createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+          [i.id, i.name, i.description, i.brand, i.model, i.serialNumber, i.color, i.quantity, i.price, i.cost, i.createdAt]
+        );
+      }
+
+      for (const o of orders) {
+        await pool.query(
+          'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+          [o.id, o.customerId, o.deviceType, o.brand, o.model, o.serialNumber, o.deviceCondition, o.accessories, o.isWarranty, o.issueDescription, o.technicianNotes, o.status, JSON.stringify(o.partsUsed), o.laborCost, o.totalCost, o.partsDiscount, o.paymentStatus, o.paymentMethod, o.paymentDate, o.createdAt, o.updatedAt, o.completedAt, o.orderType, o.clientQuoteStatus, o.clientQuoteObservation, o.clientQuoteDate, o.externalSupplier, o.externalDispatchDate]
+        );
+      }
+
+      for (const a of appointments) {
+        await pool.query(
+          'INSERT INTO appointments (id, customerId, title, start, end, type, status, notes) VALUES (?,?,?,?,?,?,?,?)',
+          [a.id, a.customerId, a.title, a.start, a.end, a.type, a.status, a.notes]
+        );
+      }
+      
+      if (settings && Object.keys(settings).length > 0) {
+        await pool.query(
+          'UPDATE settings SET companyName=?, legalName=?, nif=?, phone=?, email=?, address=?, city=?, postalCode=?, logo=?, orderSeries=? WHERE id=1',
+          [settings.companyName, settings.legalName, settings.nif, settings.phone, settings.email, settings.address, settings.city, settings.postalCode, settings.logo, settings.orderSeries]
+        );
+      }
+
+      res.json({ success: true });
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

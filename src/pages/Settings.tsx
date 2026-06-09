@@ -201,6 +201,88 @@ export function Settings() {
           </div>
         </form>
       </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex items-center gap-2">
+          <Save className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-medium text-slate-900">Backup / Restauro de Dados</h2>
+        </div>
+        <div className="p-6 space-y-6">
+          <p className="text-sm text-slate-600">
+            Pode exportar toda a base de dados (clientes, peças, ordens, configurações) em segurança e voltar a importar noutra máquina ou mais tarde.
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/backup-db');
+                  const data = await res.json();
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `backup_techassist_${new Date().toISOString().split('T')[0]}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (e) {
+                  alert('Erro ao gerar backup.');
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+            >
+              Exportar Backup (JSON)
+            </button>
+
+            <div className="relative">
+              <input
+                type="file"
+                accept="application/json"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                title="Importar Backup"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!window.confirm('Aviso: Isto irá APAGAR todos os dados atuais e substituir pelos dados do ficheiro. Tem a certeza?')) {
+                    return;
+                  }
+                  
+                  const reader = new FileReader();
+                  reader.onloadend = async () => {
+                    try {
+                      const data = JSON.parse(reader.result as string);
+                      const res = await fetch('/api/restore-db', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                      });
+                      
+                      if (res.ok) {
+                        alert('Base de dados restaurada com sucesso! A página será atualizada.');
+                        window.location.reload();
+                      } else {
+                        const err = await res.json();
+                        alert('Erro ao restaurar: ' + err.error);
+                      }
+                    } catch (err) {
+                      alert('Erro ao ler ficheiro de backup.');
+                    }
+                  };
+                  reader.readAsText(file);
+                }}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
+              >
+                Importar Backup
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -224,6 +224,17 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
         )}
       </div>
 
+      {type === 'orcamento' && (
+        <div className="mt-4 p-3 border rounded text-[11px]" style={{ borderColor: colors.slate400 }}>
+          <p className="font-bold mb-2">Decisão do Cliente:</p>
+          <div className="space-y-2">
+            <p>(&nbsp;&nbsp;&nbsp;) <strong>Aceito</strong> o Orçamento no valor de: {formatCurrency(order.totalCost)}</p>
+            <p>(&nbsp;&nbsp;&nbsp;) <strong>Recuso</strong> o orçamento. Tenho conhecimento que podem ser aplicadas taxas de diagnóstico.</p>
+            <p>(&nbsp;&nbsp;&nbsp;) <strong>Autorizo a reciclagem</strong> do equipamento.</p>
+          </div>
+        </div>
+      )}
+
       {/* Signatures */}
       <div className="mt-8 grid grid-cols-2 gap-16">
         <div className="text-center">
