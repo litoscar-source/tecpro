@@ -118,14 +118,34 @@ async function startServer() {
         )
       `);
       console.log("Database tables initialized.");
-    } catch (err) {
+      return { success: true, message: "Tabelas criadas com sucesso." };
+    } catch (err: any) {
       console.error("Warning: Database initialization error:", err);
+      return { success: false, message: "Erro ao criar tabelas.", error: err.message };
     }
   }
 
   await initDB();
 
   // --- API ROUTES ---
+
+  app.get('/api/test-db', async (req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({ status: 'success', message: 'Conexão à base de dados bem-sucedida! Tudo a funcionar.' });
+    } catch (e: any) {
+      res.status(500).json({ status: 'error', message: 'Erro ao ligar à base de dados.', details: e.message });
+    }
+  });
+
+  app.get('/api/setup-db', async (req, res) => {
+    const result = await initDB();
+    if (result.success) {
+      res.json(result);
+    } else {
+      res.status(500).json(result);
+    }
+  });
 
   // Customers
   app.get('/api/customers', async (req, res) => {
