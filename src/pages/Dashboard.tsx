@@ -21,7 +21,7 @@ export function Dashboard() {
     const date = new Date(o.clientQuoteDate);
     const diffTime = Math.abs(new Date().getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 3;
+    return diffDays <= 7;
   });
 
   const lowStockThreshold = 2;

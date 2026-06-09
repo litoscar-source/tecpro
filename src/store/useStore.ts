@@ -72,13 +72,18 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateCustomer: async (id, updatedCustomer) => {
+    const currentState = get();
+    const existing = currentState.customers.find(c => c.id === id);
+    if (!existing) return;
+    const full = { ...existing, ...updatedCustomer };
+    
     await fetch(`/api/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedCustomer)
+      body: JSON.stringify(full)
     });
     set((state) => ({
-      customers: state.customers.map((c) => (c.id === id ? { ...c, ...updatedCustomer } : c)),
+      customers: state.customers.map((c) => (c.id === id ? full : c)),
     }));
   },
 
@@ -97,13 +102,18 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateInventoryItem: async (id, updatedItem) => {
+    const currentState = get();
+    const existing = currentState.inventory.find(i => i.id === id);
+    if (!existing) return;
+    const full = { ...existing, ...updatedItem };
+    
     await fetch(`/api/inventory/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedItem)
+      body: JSON.stringify(full)
     });
     set((state) => ({
-      inventory: state.inventory.map((i) => (i.id === id ? { ...i, ...updatedItem } : i)),
+      inventory: state.inventory.map((i) => (i.id === id ? full : i)),
     }));
   },
 
@@ -122,13 +132,18 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateOrder: async (id, updatedOrder) => {
+    const currentState = get();
+    const existingOrder = currentState.orders.find(o => o.id === id);
+    if (!existingOrder) return;
+    const fullUpdatedOrder = { ...existingOrder, ...updatedOrder, updatedAt: new Date().toISOString() };
+    
     await fetch(`/api/orders/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedOrder)
+      body: JSON.stringify(fullUpdatedOrder)
     });
     set((state) => ({
-      orders: state.orders.map((o) => (o.id === id ? { ...o, ...updatedOrder, updatedAt: new Date().toISOString() } : o)),
+      orders: state.orders.map((o) => (o.id === id ? fullUpdatedOrder : o)),
     }));
   },
 
@@ -147,13 +162,18 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateAppointment: async (id, updatedAppointment) => {
+    const currentState = get();
+    const existing = currentState.appointments.find(a => a.id === id);
+    if (!existing) return;
+    const full = { ...existing, ...updatedAppointment };
+    
     await fetch(`/api/appointments/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedAppointment)
+      body: JSON.stringify(full)
     });
     set((state) => ({
-      appointments: state.appointments.map((a) => (a.id === id ? { ...a, ...updatedAppointment } : a)),
+      appointments: state.appointments.map((a) => (a.id === id ? full : a)),
     }));
   },
 
@@ -163,13 +183,16 @@ export const useStore = create<AppState>()((set, get) => ({
   },
 
   updateSettings: async (updatedSettings) => {
+    const currentState = get();
+    const full = currentState.settings ? { ...currentState.settings, ...updatedSettings } : updatedSettings as CompanySettings;
+    
     await fetch('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedSettings)
+      body: JSON.stringify(full)
     });
     set((state) => ({
-      settings: state.settings ? { ...state.settings, ...updatedSettings } : updatedSettings as CompanySettings
+      settings: full
     }));
   },
 }));

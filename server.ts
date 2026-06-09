@@ -127,6 +127,12 @@ async function startServer() {
         await pool.query('ALTER TABLE orders ADD COLUMN paymentStatus VARCHAR(255)');
         await pool.query('ALTER TABLE orders ADD COLUMN paymentMethod VARCHAR(255)');
         await pool.query('ALTER TABLE orders ADD COLUMN paymentDate VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN orderType VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteStatus VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteObservation TEXT');
+        await pool.query('ALTER TABLE orders ADD COLUMN clientQuoteDate VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN externalSupplier VARCHAR(255)');
+        await pool.query('ALTER TABLE orders ADD COLUMN externalDispatchDate VARCHAR(255)');
       } catch(e) {}
 
       await pool.query(`
@@ -282,10 +288,10 @@ async function startServer() {
 
   app.post('/api/orders', async (req, res) => {
     try {
-      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt } = req.body;
+      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate } = req.body;
       await pool.query(
-        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt]
+        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -295,10 +301,10 @@ async function startServer() {
 
   app.put('/api/orders/:id', async (req, res) => {
     try {
-      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt } = req.body;
+      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate } = req.body;
       await pool.query(
-        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=? WHERE id=?',
-        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, req.params.id]
+        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=?, orderType=?, clientQuoteStatus=?, clientQuoteObservation=?, clientQuoteDate=?, externalSupplier=?, externalDispatchDate=? WHERE id=?',
+        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null, req.params.id]
       );
       res.json({ success: true });
     } catch (e: any) {
