@@ -21,6 +21,14 @@ export default function App() {
   
   useEffect(() => {
     fetchData();
+    
+    // Refresh data when window regains focus (e.g. user returns from another tab)
+    const handleFocus = () => {
+      fetchData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [fetchData]);
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {

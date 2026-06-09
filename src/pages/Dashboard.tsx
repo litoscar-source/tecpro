@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Users, Wrench, CheckCircle, Clock, DollarSign, Bell, AlertTriangle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -6,7 +7,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
-  const { orders, customers, inventory } = useStore();
+  const { orders, customers, inventory, fetchData } = useStore();
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const pendingOrders = orders.filter(o => o.status === 'entrada' || o.status === 'diagnostico' || o.status === 'orcamento').length;
   const inProgressOrders = orders.filter(o => o.status === 'aguarda_peca' || o.status === 'expedido').length;
