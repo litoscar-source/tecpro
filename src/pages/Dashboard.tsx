@@ -1,8 +1,9 @@
 import { useStore } from '../store/useStore';
-import { Users, Wrench, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { Users, Wrench, CheckCircle, Clock, DollarSign, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { Link } from 'react-router-dom';
 
 export function Dashboard() {
   const { orders, customers, inventory } = useStore();
@@ -14,6 +15,15 @@ export function Dashboard() {
   
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+
+  // Obter orçamentos respondidos recentemente (nos últimos 3 dias)
+  const recentQuoteResponses = [...orders].filter(o => {
+    if (!o.clientQuoteStatus || !o.clientQuoteDate) return false;
+    const date = new Date(o.clientQuoteDate);
+    const diffTime = Math.abs(new Date().getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3;
+  }).sort((a, b) => new Date(b.clientQuoteDate!).getTime() - new Date(a.clientQuoteDate!).getTime());
 
   const totalRevenue = orders
     .filter(o => o.status === 'pronto' || o.status === 'fechado')
@@ -83,6 +93,39 @@ export function Dashboard() {
         <p className="text-sm text-slate-500">Visão geral da sua assistência técnica.</p>
       </div>
 
+      {recentQuoteResponses.length > 0 && (
+        <div className="bg-white border text-sm border-blue-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex items-center gap-2">
+            <Bell className="h-5 w-5 text-blue-600" />
+            <h3 className="font-semibold text-blue-900">Notificações de Orçamentos ({recentQuoteResponses.length})</h3>
+          </div>
+          <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+            {recentQuoteResponses.map(order => {
+              const customer = customers.find(c => c.id === order.customerId);
+              return (
+                <div key={order.id} className="p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-medium text-slate-900 mr-2">OS: {order.id.toUpperCase()}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        order.clientQuoteStatus === 'accepted' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {order.clientQuoteStatus === 'accepted' ? 'Orçamento Aceite' : 'Orçamento Recusado'}
+                      </span>
+                      <p className="text-slate-600 mt-1">Cliente: {customer?.name}</p>
+                      {order.clientQuoteObservation && (
+                        <p className="text-slate-500 italic mt-1 text-xs">Obs: "{order.clientQuoteObservation}"</p>
+                      )}
+                    </div>
+                    <Link to="/orders" className="text-blue-600 hover:text-blue-800 text-xs font-medium">Ver Encomenda</Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -143,7 +186,7 @@ export function Dashboard() {
           <div className="border-b border-slate-200 px-6 py-4">
             <h2 className="text-lg font-medium text-slate-900">Reparações por Equipamento</h2>
           </div>
-          <div className="p-6 flex-1 h-64">
+          <div className="p-6 flex-1 min-h-[350px]">
             {deviceData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -151,8 +194,8 @@ export function Dashboard() {
                     data={deviceData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={90}
+                    outerRadius={120}
                     paddingAngle={5}
                     dataKey="value"
                   >

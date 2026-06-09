@@ -50,6 +50,7 @@ export function PublicQuote() {
       updateOrder(order.id, {
         clientQuoteStatus: status,
         clientQuoteObservation: observation,
+        clientQuoteDate: new Date().toISOString(),
         // Ao aceitar o orçamento, pode passar automaticamente de status
         status: status === 'accepted' ? 'aguarda_peca' : 'cancelado'
       });

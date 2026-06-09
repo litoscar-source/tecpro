@@ -725,7 +725,7 @@ export function Orders() {
                   </div>
 
                   {editingOrder && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -737,6 +737,22 @@ export function Orders() {
                       >
                         Copiar Link para o Cliente (Orçamento)
                       </button>
+
+                      {editingOrder.clientQuoteStatus && (
+                        <div className={`mt-2 p-3 text-sm rounded border ${
+                          editingOrder.clientQuoteStatus === 'accepted' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'
+                        }`}>
+                          <p className="font-semibold mb-1">
+                            {editingOrder.clientQuoteStatus === 'accepted' ? 'Orçamento Aprovado pelo Cliente' : 'Orçamento Recusado pelo Cliente'}
+                          </p>
+                          <p className="text-xs mb-1 opacity-80">
+                            Data: {editingOrder.clientQuoteDate ? new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(editingOrder.clientQuoteDate)) : 'Desconhecida'}
+                          </p>
+                          {editingOrder.clientQuoteObservation && (
+                            <p className="italic text-xs mt-1 bg-white/50 p-1.5 rounded">Obs: "{editingOrder.clientQuoteObservation}"</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 

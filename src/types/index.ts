@@ -46,6 +46,7 @@ export interface ServiceOrder {
   externalDispatchDate?: string;
   clientQuoteStatus?: 'pending' | 'accepted' | 'rejected';
   clientQuoteObservation?: string;
+  clientQuoteDate?: string;
   partsUsed: { partId: string; quantity: number }[];
   partsDiscount?: number;
   laborCost: number;
