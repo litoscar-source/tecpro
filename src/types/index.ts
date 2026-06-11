@@ -82,6 +82,8 @@ export interface CompanySettings {
   deviceTypes?: string[];
   repairTerms?: string;
   includeTermsInPdf?: boolean;
+  defaultProfitMargin?: number;
+  defaultLaborCostPerHour?: number;
 }
 
 export interface Technician {

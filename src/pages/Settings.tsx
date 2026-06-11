@@ -20,6 +20,8 @@ export function Settings() {
     deviceTypes: settings?.deviceTypes || [],
     repairTerms: settings?.repairTerms || '',
     includeTermsInPdf: settings?.includeTermsInPdf || false,
+    defaultProfitMargin: settings?.defaultProfitMargin || 30,
+    defaultLaborCostPerHour: settings?.defaultLaborCostPerHour || 35,
   });
 
   const [newBrand, setNewBrand] = useState('');
@@ -248,6 +250,34 @@ export function Settings() {
                   type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 pt-6">
+            <h3 className="mb-4 text-sm font-semibold text-slate-900">Preços Base e Orçamentos</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Custo Mão de Obra por Hora (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.defaultLaborCostPerHour}
+                  onChange={(e) => setFormData({ ...formData, defaultLaborCostPerHour: Number(e.target.value) || 0 })}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Margem de Lucro Padrão nas Peças (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  value={formData.defaultProfitMargin}
+                  onChange={(e) => setFormData({ ...formData, defaultProfitMargin: Number(e.target.value) || 0 })}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
