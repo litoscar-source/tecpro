@@ -132,12 +132,35 @@ async function startServer() {
         'ALTER TABLE orders ADD COLUMN clientQuoteObservation TEXT',
         'ALTER TABLE orders ADD COLUMN clientQuoteDate VARCHAR(255)',
         'ALTER TABLE orders ADD COLUMN externalSupplier VARCHAR(255)',
-        'ALTER TABLE orders ADD COLUMN externalDispatchDate VARCHAR(255)'
+        'ALTER TABLE orders ADD COLUMN externalDispatchDate VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN entryCondition VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN repairLocation VARCHAR(255)',
+        'ALTER TABLE orders ADD COLUMN testsPerformed TEXT',
+        'ALTER TABLE orders ADD COLUMN resolutionType VARCHAR(255)'
       ];
 
       for (const colQuery of orderColumns) {
         try { await pool.query(colQuery); } catch(e) {}
       }
+
+      const settingsColumns = [
+        'ALTER TABLE settings ADD COLUMN brands JSON',
+        'ALTER TABLE settings ADD COLUMN deviceTypes JSON'
+      ];
+      for (const colQuery of settingsColumns) {
+        try { await pool.query(colQuery); } catch(e) {}
+      }
+
+      try { await pool.query('ALTER TABLE inventory ADD COLUMN minStock INT DEFAULT 0'); } catch(e) {}
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS technicians (
+          id VARCHAR(255) PRIMARY KEY,
+          name VARCHAR(255),
+          pin VARCHAR(10),
+          createdAt VARCHAR(255)
+        )
+      `);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS appointments (
@@ -292,10 +315,10 @@ async function startServer() {
 
   app.post('/api/orders', async (req, res) => {
     try {
-      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate } = req.body;
+      const { id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate, entryCondition, repairLocation, testsPerformed, resolutionType } = req.body;
       await pool.query(
-        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null]
+        'INSERT INTO orders (id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, createdAt, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate, entryCondition, repairLocation, testsPerformed, resolutionType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', createdAt, updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null, entryCondition || null, repairLocation || null, testsPerformed || null, resolutionType || null]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -305,10 +328,10 @@ async function startServer() {
 
   app.put('/api/orders/:id', async (req, res) => {
     try {
-      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate } = req.body;
+      const { customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, partsUsed, laborCost, totalCost, partsDiscount, paymentStatus, paymentMethod, paymentDate, updatedAt, completedAt, orderType, clientQuoteStatus, clientQuoteObservation, clientQuoteDate, externalSupplier, externalDispatchDate, entryCondition, repairLocation, testsPerformed, resolutionType } = req.body;
       await pool.query(
-        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=?, orderType=?, clientQuoteStatus=?, clientQuoteObservation=?, clientQuoteDate=?, externalSupplier=?, externalDispatchDate=? WHERE id=?',
-        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null, req.params.id]
+        'UPDATE orders SET customerId=?, deviceType=?, brand=?, model=?, serialNumber=?, deviceCondition=?, accessories=?, isWarranty=?, issueDescription=?, technicianNotes=?, status=?, partsUsed=?, laborCost=?, totalCost=?, partsDiscount=?, paymentStatus=?, paymentMethod=?, paymentDate=?, updatedAt=?, completedAt=?, orderType=?, clientQuoteStatus=?, clientQuoteObservation=?, clientQuoteDate=?, externalSupplier=?, externalDispatchDate=?, entryCondition=?, repairLocation=?, testsPerformed=?, resolutionType=? WHERE id=?',
+        [customerId, deviceType, brand, model, serialNumber, deviceCondition, accessories, isWarranty, issueDescription, technicianNotes, status, JSON.stringify(partsUsed || []), laborCost, totalCost, partsDiscount || 0, paymentStatus || '', paymentMethod || '', paymentDate || '', updatedAt, completedAt, orderType || 'repair', clientQuoteStatus || null, clientQuoteObservation || null, clientQuoteDate || null, externalSupplier || null, externalDispatchDate || null, entryCondition || null, repairLocation || null, testsPerformed || null, resolutionType || null, req.params.id]
       );
       res.json({ success: true });
     } catch (e: any) {
@@ -375,7 +398,12 @@ async function startServer() {
     try {
       const [rows] = await pool.query('SELECT * FROM settings WHERE id = 1');
       if ((rows as any[]).length > 0) {
-        res.json((rows as any[])[0]);
+        const settings = (rows as any[])[0];
+        try {
+          if (typeof settings.brands === 'string') settings.brands = JSON.parse(settings.brands);
+          if (typeof settings.deviceTypes === 'string') settings.deviceTypes = JSON.parse(settings.deviceTypes);
+        } catch (e) {}
+        res.json(settings);
       } else {
         res.json({});
       }
@@ -386,12 +414,46 @@ async function startServer() {
 
   app.put('/api/settings', async (req, res) => {
     try {
-      const { companyName, legalName, nif, phone, email, address, city, postalCode, logo, orderSeries } = req.body;
+      const { companyName, legalName, nif, phone, email, address, city, postalCode, logo, orderSeries, brands, deviceTypes } = req.body;
+      const brandsStr = brands ? JSON.stringify(brands) : null;
+      const deviceTypesStr = deviceTypes ? JSON.stringify(deviceTypes) : null;
       await pool.query(
-        'UPDATE settings SET companyName=?, legalName=?, nif=?, phone=?, email=?, address=?, city=?, postalCode=?, logo=?, orderSeries=? WHERE id=1',
-        [companyName, legalName, nif, phone, email, address, city, postalCode, logo, orderSeries]
+        'UPDATE settings SET companyName=?, legalName=?, nif=?, phone=?, email=?, address=?, city=?, postalCode=?, logo=?, orderSeries=?, brands=?, deviceTypes=? WHERE id=1',
+        [companyName, legalName, nif, phone, email, address, city, postalCode, logo, orderSeries, brandsStr, deviceTypesStr]
       );
       res.json({ success: true, ...req.body, id: 1 });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Technicians
+  app.get('/api/technicians', async (req, res) => {
+    try {
+      const [rows] = await pool.query('SELECT * FROM technicians ORDER BY name ASC');
+      res.json(rows);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/technicians', async (req, res) => {
+    try {
+      const { id, name, pin, createdAt } = req.body;
+      await pool.query(
+        'INSERT INTO technicians (id, name, pin, createdAt) VALUES (?, ?, ?, ?)',
+        [id, name, pin, createdAt]
+      );
+      res.json({ success: true, id });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/technicians/:id', async (req, res) => {
+    try {
+      await pool.query('DELETE FROM technicians WHERE id=?', [req.params.id]);
+      res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }

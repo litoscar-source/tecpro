@@ -1,10 +1,13 @@
-import { Bell, Search, User, Menu } from 'lucide-react';
+import { Bell, Search, User, Menu, Moon, Sun } from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
 }
 
 export function Header({ onMenuToggle }: HeaderProps) {
+  const { theme, setTheme } = useStore();
+
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b bg-white px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2 md:gap-4 flex-1">
@@ -27,6 +30,14 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
       
       <div className="flex items-center gap-2 md:gap-4">
+        <button 
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 transition-colors"
+          title={theme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
+        >
+          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </button>
+        
         <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 hidden sm:block">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-red-500"></span>

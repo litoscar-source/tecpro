@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Customer, InventoryItem, ServiceOrder, CompanySettings, Appointment } from '../types';
+import { Customer, InventoryItem, ServiceOrder, CompanySettings, Appointment, Technician } from '../types';
 
 interface AppState {
   customers: Customer[];
@@ -7,8 +7,11 @@ interface AppState {
   orders: ServiceOrder[];
   appointments: Appointment[];
   settings: CompanySettings | null;
+  technicians: Technician[];
+  theme: 'light' | 'dark';
   isLoading: boolean;
   fetchData: () => Promise<void>;
+  setTheme: (theme: 'light' | 'dark') => void;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
@@ -22,6 +25,8 @@ interface AppState {
   updateAppointment: (id: string, appointment: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<CompanySettings>) => Promise<void>;
+  addTechnician: (tech: Technician) => Promise<void>;
+  deleteTechnician: (id: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>()((set, get) => ({
@@ -30,16 +35,29 @@ export const useStore = create<AppState>()((set, get) => ({
   orders: [],
   appointments: [],
   settings: null,
+  technicians: [],
+  theme: (localStorage.getItem('app-theme') as 'light' | 'dark') || 'light',
   isLoading: true,
+
+  setTheme: (theme) => {
+    localStorage.setItem('app-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    set({ theme });
+  },
 
   fetchData: async () => {
     try {
-      const [customersRes, inventoryRes, ordersRes, appointmentsRes, settingsRes] = await Promise.all([
+      const [customersRes, inventoryRes, ordersRes, appointmentsRes, settingsRes, techsRes] = await Promise.all([
         fetch('/api/customers'),
         fetch('/api/inventory'),
         fetch('/api/orders'),
         fetch('/api/appointments'),
-        fetch('/api/settings')
+        fetch('/api/settings'),
+        fetch('/api/technicians')
       ]);
       
       const customersData = customersRes.ok ? await customersRes.json() : [];
@@ -47,6 +65,7 @@ export const useStore = create<AppState>()((set, get) => ({
       const ordersData = ordersRes.ok ? await ordersRes.json() : [];
       const appointmentsData = appointmentsRes.ok ? await appointmentsRes.json() : [];
       const settingsData = settingsRes.ok ? await settingsRes.json() : null;
+      const techsData = techsRes.ok ? await techsRes.json() : [];
 
       set({ 
         customers: Array.isArray(customersData) ? customersData : [], 
@@ -54,6 +73,7 @@ export const useStore = create<AppState>()((set, get) => ({
         orders: Array.isArray(ordersData) ? ordersData : [], 
         appointments: Array.isArray(appointmentsData) ? appointmentsData : [], 
         settings: settingsData?.error ? null : settingsData, 
+        technicians: Array.isArray(techsData) ? techsData : [],
         isLoading: false 
       });
     } catch (error) {
@@ -194,5 +214,19 @@ export const useStore = create<AppState>()((set, get) => ({
     set((state) => ({
       settings: full
     }));
+  },
+
+  addTechnician: async (tech) => {
+    await fetch('/api/technicians', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tech)
+    });
+    set((state) => ({ technicians: [...state.technicians, tech] }));
+  },
+
+  deleteTechnician: async (id) => {
+    await fetch(`/api/technicians/${id}`, { method: 'DELETE' });
+    set((state) => ({ technicians: state.technicians.filter((t) => t.id !== id) }));
   },
 }));

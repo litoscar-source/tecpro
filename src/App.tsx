@@ -13,14 +13,22 @@ import { Orders } from './pages/Orders';
 import { Settings } from './pages/Settings';
 import { Agenda } from './pages/Agenda';
 import { PublicQuote } from './pages/PublicQuote';
+import { Reports } from './pages/Reports';
+import { Calculator } from './pages/Calculator';
 import { PinScreen } from './components/PinScreen';
 import { useStore } from './store/useStore';
 
 export default function App() {
-  const { fetchData, isLoading } = useStore();
+  const { fetchData, isLoading, theme } = useStore();
   
   useEffect(() => {
     fetchData();
+    
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     
     // Refresh data when window regains focus (e.g. user returns from another tab)
     const handleFocus = () => {
@@ -67,6 +75,8 @@ export default function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="calculator" element={<Calculator />} />
         </Route>
       </Routes>
     </BrowserRouter>

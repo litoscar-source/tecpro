@@ -11,16 +11,27 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 export function Orders() {
-  const { orders, customers, inventory, settings, addOrder, updateOrder, deleteOrder, updateCustomer } = useStore();
+  const { orders, customers, inventory, settings, addOrder, updateOrder, deleteOrder, updateCustomer, addCustomer } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<ServiceOrder | null>(null);
+  const [activeTab, setActiveTab] = useState('resumo');
   
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [customerFormData, setCustomerFormData] = useState<Partial<Customer>>({});
 
   const [showHistoryModal, setShowHistoryModal] = useState<'customer' | 'device' | null>(null);
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    nif: '',
+    address: '',
+    postalCode: '',
+    city: ''
+  });
 
   const [printData, setPrintData] = useState<{ order: ServiceOrder, type: 'entrada' | 'saida' | 'orcamento' } | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -29,6 +40,7 @@ export function Orders() {
   const [formData, setFormData] = useState({
     customerId: '',
     orderType: 'repair' as 'repair' | 'service',
+    deliveryMethod: 'client' as 'client' | 'carrier',
     deviceType: '',
     brand: '',
     model: '',
@@ -41,9 +53,10 @@ export function Orders() {
     status: 'entrada' as OrderStatus,
     externalSupplier: '',
     externalDispatchDate: '',
+    externalReturnDate: '',
     partsUsed: [] as { partId: string; quantity: number }[],
-    laborCost: 0,
-    partsDiscount: 0,
+    laborCost: '' as number | '',
+    partsDiscount: '' as number | '',
     paymentStatus: 'pendente',
     paymentMethod: '',
     paymentDate: '',
@@ -88,6 +101,7 @@ export function Orders() {
       setFormData({
         customerId: order.customerId,
         orderType: order.orderType || 'repair',
+        deliveryMethod: order.deliveryMethod || 'client',
         deviceType: order.deviceType,
         brand: order.brand,
         model: order.model,
@@ -98,11 +112,16 @@ export function Orders() {
         issueDescription: order.issueDescription,
         technicianNotes: order.technicianNotes,
         status: order.status,
+        entryCondition: order.entryCondition || 'sujeito a custos',
+        repairLocation: order.repairLocation || 'interna',
+        testsPerformed: order.testsPerformed || '',
+        resolutionType: order.resolutionType || '',
         externalSupplier: order.externalSupplier || '',
         externalDispatchDate: order.externalDispatchDate || '',
+        externalReturnDate: order.externalReturnDate || '',
         partsUsed: order.partsUsed || [],
-        laborCost: order.laborCost || 0,
-        partsDiscount: order.partsDiscount || 0,
+        laborCost: order.laborCost === 0 ? '' : order.laborCost,
+        partsDiscount: order.partsDiscount === 0 ? '' : order.partsDiscount,
         paymentStatus: order.paymentStatus || 'pendente',
         paymentMethod: order.paymentMethod || '',
         paymentDate: order.paymentDate || '',
@@ -113,6 +132,7 @@ export function Orders() {
       setFormData({
         customerId: '',
         orderType: 'repair',
+        deliveryMethod: 'client',
         deviceType: '',
         brand: '',
         model: '',
@@ -123,17 +143,22 @@ export function Orders() {
         issueDescription: '',
         technicianNotes: '',
         status: 'entrada',
+        entryCondition: 'sujeito a custos',
+        repairLocation: 'interna',
+        testsPerformed: '',
+        resolutionType: '',
         externalSupplier: '',
         externalDispatchDate: '',
         partsUsed: [],
-        laborCost: 0,
-        partsDiscount: 0,
+        laborCost: '',
+        partsDiscount: '',
         paymentStatus: 'pendente',
         paymentMethod: '',
         paymentDate: '',
       });
       setSendWhatsApp(true);
     }
+    setActiveTab('resumo');
     setIsModalOpen(true);
   };
 
@@ -206,6 +231,30 @@ export function Orders() {
     
     // Open in a new tab
     window.open(url, '_blank');
+  };
+
+  const handleCreateQuickCustomer = () => {
+    if (!newCustomerData.name) {
+      alert("O nome do cliente é obrigatório.");
+      return;
+    }
+    const newId = crypto.randomUUID();
+    addCustomer({
+      id: newId,
+      ...newCustomerData,
+      createdAt: new Date().toISOString()
+    });
+    setFormData({ ...formData, customerId: newId });
+    setShowNewCustomerForm(false);
+    setNewCustomerData({
+      name: '',
+      phone: '',
+      email: '',
+      nif: '',
+      address: '',
+      postalCode: '',
+      city: ''
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -340,7 +389,11 @@ export function Orders() {
               {filteredOrders.map((order) => {
                 const customer = customers.find(c => c.id === order.customerId);
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50">
+                  <tr 
+                    key={order.id} 
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onDoubleClick={() => handleOpenModal(order)}
+                  >
                     <td className="px-6 py-4 font-medium text-slate-900">
                       <div>{order.id.toUpperCase()}</div>
                       <div className="text-[10px] text-slate-500 uppercase">{order.orderType === 'service' ? 'Serviço' : 'Reparação'}</div>
@@ -458,12 +511,81 @@ export function Orders() {
           
           <div className="flex-1 overflow-y-auto p-4 sm:p-8">
             <form onSubmit={handleSubmit} className="mx-auto max-w-5xl bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Coluna Esquerda */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="font-medium text-slate-900">Dados do Cliente</h3>
-                    {pastCustomerOrders.length > 0 && (
+              <div className="flex items-center gap-6 px-6 sm:px-8 border-b border-slate-200 bg-slate-50 pt-4 overflow-x-auto">
+                <button type="button" onClick={() => setActiveTab('resumo')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === 'resumo' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Resumo / Entrada</button>
+                <button type="button" disabled={!editingOrder} onClick={() => setActiveTab('reparacao')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'reparacao' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Reparação</button>
+                <button type="button" disabled={formData.status === 'entrada'} onClick={() => setActiveTab('testes')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'testes' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Testes Efetuados</button>
+                <button type="button" disabled={formData.status === 'entrada'} onClick={() => setActiveTab('fecho')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'fecho' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Fechar Processo</button>
+              </div>
+
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto">
+                {activeTab === 'resumo' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
+                    {/* Coluna Esquerda */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <h3 className="font-medium text-slate-900">Dados da Entrada</h3>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Status da OS</label>
+                          <select
+                            required
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
+                          >
+                            <option value="entrada">Entrada</option>
+                            <option value="diagnostico">Diagnóstico</option>
+                            <option value="orcamento">Orçamento</option>
+                            <option value="aguarda_peca">A Aguardar Peça</option>
+                            <option value="expedido">Expedido p/ Fornecedor</option>
+                            <option value="pronto">Pronto</option>
+                            <option value="fechado">Fechado</option>
+                            <option value="cancelado">Cancelado</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Condição de Entrada</label>
+                          <select
+                            value={formData.entryCondition}
+                            onChange={(e) => setFormData({ ...formData, entryCondition: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="sujeito a custos">Sujeito a Custos</option>
+                            <option value="reclamacao">Reclamação</option>
+                            <option value="garantia">Garantia</option>
+                            <option value="para_orcamento">Para Orçamento</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de Processo</label>
+                          <select
+                            value={formData.orderType}
+                            onChange={(e) => setFormData({ ...formData, orderType: e.target.value as 'repair' | 'service' })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="repair">Reparação</option>
+                            <option value="service">Prestação de Serviço</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Método de Entrega</label>
+                          <select
+                            value={formData.deliveryMethod}
+                            onChange={(e) => setFormData({ ...formData, deliveryMethod: e.target.value as 'client' | 'carrier' })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="client">Entregue pelo Cliente</option>
+                            <option value="carrier">Por Transportadora</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-b pb-2 mt-4">
+                        <h3 className="font-medium text-slate-900">Dados do Cliente</h3>
+                        {pastCustomerOrders.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setShowHistoryModal('customer')}
@@ -474,18 +596,84 @@ export function Orders() {
                     )}
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
-                    <select
-                      required
-                      value={formData.customerId}
-                      onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="">Selecione um cliente...</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-slate-700">Cliente</label>
+                      {!showNewCustomerForm && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowNewCustomerForm(true); setFormData({ ...formData, customerId: '' }); }}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <Plus className="h-3 w-3" /> Novo Cliente
+                        </button>
+                      )}
+                    </div>
+                    
+                    {!showNewCustomerForm ? (
+                      <select
+                        required
+                        value={formData.customerId}
+                        onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione um cliente...</option>
+                        {customers.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-sm font-bold text-blue-900">Novo Cliente</h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewCustomerForm(false)}
+                            className="text-slate-500 hover:text-slate-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="col-span-2">
+                            <label className="mb-1 block text-xs font-medium text-slate-700">Nome <span className="text-red-500">*</span></label>
+                            <input
+                              required={showNewCustomerForm}
+                              type="text"
+                              value={newCustomerData.name}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-700">Telefone</label>
+                            <input
+                              type="tel"
+                              value={newCustomerData.phone}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-700">NIF</label>
+                            <input
+                              type="text"
+                              value={newCustomerData.nif}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, nif: e.target.value })}
+                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleCreateQuickCustomer}
+                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 transition"
+                          >
+                            Criar e Selecionar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {formData.customerId && (
@@ -590,8 +778,11 @@ export function Orders() {
                       )}
                     </div>
                   )}
+                </div>
 
-                  <div className="flex items-center justify-between border-b pb-2 pt-4">
+                {/* Coluna Direita */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
                     <h3 className="font-medium text-slate-900">Tipo de Serviço & Equipamento</h3>
                     {pastDeviceOrders.length > 0 && (
                       <button
@@ -619,23 +810,35 @@ export function Orders() {
                       <label className="mb-1 block text-sm font-medium text-slate-700">Tipo {formData.orderType === 'service' && '(Opcional)'}</label>
                       <input
                         required={formData.orderType === 'repair'}
+                        list="device-types-list"
                         type="text"
                         placeholder="Ex: Telemóvel"
                         value={formData.deviceType}
                         onChange={(e) => setFormData({ ...formData, deviceType: e.target.value })}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
+                      <datalist id="device-types-list">
+                        {settings?.deviceTypes?.map(t => (
+                          <option key={t} value={t} />
+                        ))}
+                      </datalist>
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-slate-700">Marca {formData.orderType === 'service' && '(Opcional)'}</label>
                       <input
                         required={formData.orderType === 'repair'}
+                        list="brands-list"
                         type="text"
                         placeholder="Ex: Apple"
                         value={formData.brand}
                         onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
+                      <datalist id="brands-list">
+                        {settings?.brands?.map(b => (
+                          <option key={b} value={b} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -707,253 +910,357 @@ export function Orders() {
                     />
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Coluna Direita */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-slate-900 border-b pb-2">Status e Valores</h3>
-                  
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Status da OS</label>
-                    <select
-                      required
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            {activeTab === 'reparacao' && (
+              <div className="space-y-6">
+                {formData.status === 'entrada' ? (
+                  <div className="flex flex-col items-center justify-center p-12 bg-slate-50 border border-dashed border-slate-300 rounded-xl">
+                    <h3 className="text-lg font-medium text-slate-900 mb-2">Processo não iniciado</h3>
+                    <p className="text-sm text-slate-500 mb-6 text-center max-w-md">
+                      O processo encontra-se no estado de entrada. Inicie o processo para aceder às opções de diagnóstico e reparação.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, status: 'diagnostico' })}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
                     >
-                      <option value="entrada">Entrada</option>
-                      <option value="diagnostico">Diagnóstico</option>
-                      <option value="orcamento">Orçamento</option>
-                      <option value="aguarda_peca">A Aguardar Peça</option>
-                      <option value="expedido">Expedido p/ Fornecedor</option>
-                      <option value="pronto">Pronto</option>
-                      <option value="fechado">Fechado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
-
-                    {formData.status === 'expedido' && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-indigo-900">Fornecedor Externo</label>
-                          <input
-                            type="text"
-                            value={formData.externalSupplier}
-                            onChange={(e) => setFormData({ ...formData, externalSupplier: e.target.value })}
-                            className="w-full rounded-md border border-indigo-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 bg-white"
-                            placeholder="Nome do fornecedor"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium text-indigo-900">Data de Expedição</label>
-                          <input
-                            type="date"
-                            value={formData.externalDispatchDate}
-                            onChange={(e) => setFormData({ ...formData, externalDispatchDate: e.target.value })}
-                            className="w-full rounded-md border border-indigo-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 bg-white"
-                          />
-                        </div>
-                      </div>
-                    )}
+                      Iniciar Reparação
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">Tipo de Reparação</label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            checked={formData.repairLocation === 'interna'}
+                            onChange={() => setFormData({ ...formData, repairLocation: 'interna' as 'interna' | 'externa' })}
+                            className="text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">Interna</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            checked={formData.repairLocation === 'externa'}
+                            onChange={() => setFormData({ ...formData, repairLocation: 'externa' as 'interna' | 'externa' })}
+                            className="text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm">Externa</span>
+                        </label>
+                      </div>
+                    </div>
 
-                  {editingOrder && (
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const url = `${window.location.origin}/quote/${editingOrder.id}`;
-                          navigator.clipboard.writeText(url);
-                          alert('Link do orçamento copiado para a área de transferência!');
-                        }}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition-colors w-full text-center border border-blue-200"
-                      >
-                        Copiar Link para o Cliente (Orçamento)
-                      </button>
+                {formData.repairLocation === 'externa' && (
+                  <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100 flex flex-col gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-indigo-900">Fornecedor Externo / Parceiro</label>
+                      <input
+                        type="text"
+                        value={formData.externalSupplier}
+                        onChange={(e) => setFormData({ ...formData, externalSupplier: e.target.value })}
+                        className="w-full max-w-md rounded-md border border-indigo-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 bg-white"
+                        placeholder="Nome da empresa ou fornecedor..."
+                      />
+                    </div>
 
-                      {editingOrder.clientQuoteStatus && (
-                        <div className={`mt-2 p-3 text-sm rounded border ${
-                          editingOrder.clientQuoteStatus === 'accepted' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'
-                        }`}>
-                          <p className="font-semibold mb-1">
-                            {editingOrder.clientQuoteStatus === 'accepted' ? 'Orçamento Aprovado pelo Cliente' : 'Orçamento Recusado pelo Cliente'}
-                          </p>
-                          <p className="text-xs mb-1 opacity-80">
-                            Data: {editingOrder.clientQuoteDate ? new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(editingOrder.clientQuoteDate)) : 'Desconhecida'}
-                          </p>
-                          {editingOrder.clientQuoteObservation && (
-                            <p className="italic text-xs mt-1 bg-white/50 p-1.5 rounded">Obs: "{editingOrder.clientQuoteObservation}"</p>
-                          )}
+                    <div className="flex gap-4 items-center">
+                      {!formData.externalDispatchDate ? (
+                         <button
+                           type="button"
+                           disabled={!formData.externalSupplier}
+                           onClick={() => setFormData({
+                             ...formData,
+                             status: 'expedido',
+                             externalDispatchDate: new Date().toISOString().split('T')[0]
+                           })}
+                           className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                         >
+                           Expedir Equipamento
+                         </button>
+                      ) : (
+                        <div className="bg-white border text-indigo-800 border-indigo-200 px-4 py-2 rounded-lg text-sm flex gap-2 items-center">
+                          <span className="font-semibold text-indigo-600">Expedido a:</span> {new Date(formData.externalDispatchDate).toLocaleDateString()}
+                        </div>
+                      )}
+
+                      {formData.externalDispatchDate && !formData.externalReturnDate ? (
+                         <button
+                           type="button"
+                           onClick={() => setFormData({
+                             ...formData,
+                             status: 'diagnostico',
+                             externalReturnDate: new Date().toISOString().split('T')[0]
+                           })}
+                           className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition space-x-2"
+                         >
+                           Rececionar Equipamento
+                         </button>
+                      ) : formData.externalReturnDate ? (
+                        <div className="bg-white border text-emerald-800 border-emerald-200 px-4 py-2 rounded-lg text-sm flex gap-2 items-center">
+                          <span className="font-semibold text-emerald-600">Rececionado a:</span> {new Date(formData.externalReturnDate).toLocaleDateString()}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {(formData.repairLocation === 'interna' || (formData.repairLocation === 'externa' && formData.externalReturnDate)) && (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Relatório Técnico / Reparação</label>
+                      <textarea
+                        value={formData.technicianNotes}
+                        onChange={(e) => setFormData({ ...formData, technicianNotes: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        rows={4}
+                        placeholder="Descrição do trabalho efetuado..."
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1 mt-4">
+                        <label className="block text-sm font-medium text-slate-700">Peças Utilizadas & Componentes</label>
+                        <button 
+                          type="button"
+                          onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1 }] })}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          + Adicionar Peça
+                        </button>
+                      </div>
+                      
+                      {formData.partsUsed.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Nenhuma peça adicionada.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {formData.partsUsed.map((part, index) => (
+                            <div key={index} className="flex gap-2 items-center">
+                              <select
+                                value={part.partId}
+                                onChange={(e) => {
+                                  const newParts = [...formData.partsUsed];
+                                  newParts[index].partId = e.target.value;
+                                  setFormData({ ...formData, partsUsed: newParts });
+                                }}
+                                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                              >
+                                <option value="">Selecione...</option>
+                                {inventory.map(i => (
+                                  <option key={i.id} value={i.id}>{i.name} - {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(i.price)}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                min="1"
+                                value={part.quantity}
+                                onChange={(e) => {
+                                  const newParts = [...formData.partsUsed];
+                                  newParts[index].quantity = Number(e.target.value);
+                                  setFormData({ ...formData, partsUsed: newParts });
+                                }}
+                                className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newParts = [...formData.partsUsed];
+                                  newParts.splice(index, 1);
+                                  setFormData({ ...formData, partsUsed: newParts });
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                  )}
 
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Relatório Técnico</label>
-                    <textarea
-                      value={formData.technicianNotes}
-                      onChange={(e) => setFormData({ ...formData, technicianNotes: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-sm font-medium text-slate-700">Peças Utilizadas</label>
-                      <button 
-                        type="button"
-                        onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1 }] })}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        + Adicionar Peça
-                      </button>
-                    </div>
-                    
-                    {formData.partsUsed.length === 0 ? (
-                      <p className="text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Nenhuma peça adicionada.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {formData.partsUsed.map((part, index) => (
-                          <div key={index} className="flex gap-2 items-center">
-                            <select
-                              value={part.partId}
-                              onChange={(e) => {
-                                const newParts = [...formData.partsUsed];
-                                newParts[index].partId = e.target.value;
-                                setFormData({ ...formData, partsUsed: newParts });
-                              }}
-                              className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-                            >
-                              <option value="">Selecione...</option>
-                              {inventory.map(i => (
-                                <option key={i.id} value={i.id}>{i.name} - {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(i.price)}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="number"
-                              min="1"
-                              value={part.quantity}
-                              onChange={(e) => {
-                                const newParts = [...formData.partsUsed];
-                                newParts[index].quantity = Number(e.target.value);
-                                setFormData({ ...formData, partsUsed: newParts });
-                              }}
-                              className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newParts = [...formData.partsUsed];
-                                newParts.splice(index, 1);
-                                setFormData({ ...formData, partsUsed: newParts });
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Mão de Obra (€)</label>
-                      <input
-                        required
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.laborCost}
-                        onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Desconto nas Peças (€)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.partsDiscount || 0}
-                        onChange={(e) => setFormData({ ...formData, partsDiscount: Number(e.target.value) })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-slate-200 my-4 pt-4">
-                    <h4 className="text-sm font-bold text-slate-900 mb-3">Pagamento</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Estado</label>
-                        <select
-                          value={formData.paymentStatus || 'pendente'}
-                          onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="pendente">Pendente</option>
-                          <option value="pago">Pago</option>
-                          <option value="cancelado">Cancelado</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Meio</label>
-                        <select
-                          value={formData.paymentMethod || ''}
-                          onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        >
-                          <option value="">Nenhum</option>
-                          <option value="dinheiro">Dinheiro</option>
-                          <option value="multibanco">Multibanco</option>
-                          <option value="mbway">MB Way</option>
-                          <option value="transferencia">Transferência</option>
-                          <option value="cartao">Cartão Crédito</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-sm font-medium text-slate-700">Data de Pagamento</label>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Mão de Obra (€)</label>
                         <input
-                          type="date"
-                          value={formData.paymentDate || ''}
-                          onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                          required
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.laborCost}
+                          onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Desconto nas Peças (€)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formData.partsDiscount || 0}
+                          onChange={(e) => setFormData({ ...formData, partsDiscount: Number(e.target.value) })}
                           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 border-t border-slate-200 mt-4 pt-4">
-                    <input
-                      type="checkbox"
-                      id="sendWhatsApp"
-                      checked={sendWhatsApp}
-                      onChange={(e) => setSendWhatsApp(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <label htmlFor="sendWhatsApp" className="text-sm font-medium text-slate-700">
-                      Enviar notificação por WhatsApp ao Guardar
-                    </label>
-                  </div>
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">
+                      <div className="flex justify-between items-center font-bold text-lg">
+                        <span className="text-slate-700">Total Estimado de Reparação:</span>
+                        <span className="text-blue-600">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(calculateTotalCost())}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-4">
-                    <div className="flex justify-between items-center font-bold text-lg">
-                      <span className="text-slate-700">Total Estimado:</span>
-                      <span className="text-blue-600">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(calculateTotalCost())}</span>
+                {formData.repairLocation === 'externa' && !formData.externalReturnDate && (
+                  <div className="bg-amber-50 text-amber-800 p-4 rounded-lg border border-amber-200 text-sm mt-4">
+                    Os campos de relatório técnico, mão de obra e peças só estarão disponíveis após preencher a <strong>Data de Receção</strong> do equipamento.
+                  </div>
+                )}
+                </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'testes' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-medium text-slate-900 border-b pb-2 mb-4">Testes Efetuados</h3>
+                  <textarea
+                    value={formData.testsPerformed}
+                    onChange={(e) => setFormData({ ...formData, testsPerformed: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    rows={6}
+                    placeholder="Registe aqui os testes efetuados ao equipamento (ex: WiFi, Bluetooth, Câmaras, Bateria)..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'fecho' && (
+              <div className="space-y-6 max-w-2xl mx-auto">
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900 border-b pb-2">Resolução</h3>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Resolução do Processo</label>
+                      <select
+                        value={formData.resolutionType}
+                        onChange={(e) => setFormData({ ...formData, resolutionType: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Nenhuma / Em Curso</option>
+                        <option value="reparacao_efetuada">Reparação Efetuada</option>
+                        <option value="orcamento_recusado">Orçamento Recusado</option>
+                        <option value="sem_reparacao">Sem Reparação Possível</option>
+                        <option value="sem_resposta">Sem Resposta do Cliente</option>
+                        <option value="reparacao_garantia">Reparação em Garantia</option>
+                        <option value="cortesia">Cortesia</option>
+                      </select>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex justify-between items-center p-6 sm:p-8 border-t border-slate-100 bg-slate-50">
-                <div>
-                  {editingOrder && formData.status !== 'fechado' && (
+
+                <div className="border-t border-slate-200 mt-6 pt-6">
+                  <h4 className="text-sm font-bold text-slate-900 mb-4">Informação de Pagamento</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Estado Pgt.</label>
+                      <select
+                        value={formData.paymentStatus || 'pendente'}
+                        onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="pendente">Pendente</option>
+                        <option value="pago">Pago</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Método Pgt.</label>
+                      <select
+                        value={formData.paymentMethod || ''}
+                        onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Nenhum</option>
+                        <option value="dinheiro">Dinheiro</option>
+                        <option value="multibanco">Multibanco</option>
+                        <option value="mbway">MB Way</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="cartao">Cartão Crédito</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">Data de Pagamento</label>
+                      <input
+                        type="date"
+                        value={formData.paymentDate || ''}
+                        onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {editingOrder && (
+                  <div className="border-t border-slate-200 mt-6 pt-6 flex flex-col gap-2">
+                    <h3 className="font-medium text-slate-900 border-b pb-2 mb-2">Comunicação</h3>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm("Tem a certeza que deseja fechar esta reparação?")) {
+                        const url = `${window.location.origin}/quote/${editingOrder.id}`;
+                        navigator.clipboard.writeText(url);
+                        alert('Link do orçamento copiado para a área de transferência!');
+                      }}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded transition-colors w-full text-center border border-blue-200"
+                    >
+                      Copiar Link para o Cliente (Orçamento)
+                    </button>
+
+                    {editingOrder.clientQuoteStatus && (
+                      <div className={`mt-2 p-3 text-sm rounded border ${
+                        editingOrder.clientQuoteStatus === 'accepted' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'
+                      }`}>
+                        <p className="font-semibold mb-1">
+                          {editingOrder.clientQuoteStatus === 'accepted' ? 'Orçamento Aprovado pelo Cliente' : 'Orçamento Recusado pelo Cliente'}
+                        </p>
+                        <p className="text-xs mb-1 opacity-80">
+                          Data: {editingOrder.clientQuoteDate ? new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(editingOrder.clientQuoteDate)) : 'Desconhecida'}
+                        </p>
+                        {editingOrder.clientQuoteObservation && (
+                          <p className="italic text-xs mt-1 bg-white/50 p-1.5 rounded">Obs: "{editingOrder.clientQuoteObservation}"</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 border-t border-slate-200 mt-6 pt-6">
+                  <input
+                    type="checkbox"
+                    id="sendWhatsApp"
+                    checked={sendWhatsApp}
+                    onChange={(e) => setSendWhatsApp(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="sendWhatsApp" className="text-sm font-medium text-slate-700">
+                    Enviar notificação por WhatsApp ao Guardar
+                  </label>
+                </div>
+
+                {editingOrder && formData.status !== 'fechado' && (
+                  <div className="border-t border-slate-200 mt-6 pt-6 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Tem a certeza que deseja fechar esta reparação de forma definitiva?")) {
                           const totalCost = calculateTotalCost();
                           updateOrder(editingOrder.id, {
                             ...formData,
@@ -965,12 +1272,18 @@ export function Orders() {
                           setEditingOrder(null);
                         }
                       }}
-                      className="rounded-lg bg-slate-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-slate-700 transition-colors shadow-sm"
+                      className="rounded-lg bg-red-600 px-8 py-3 text-sm font-bold text-white hover:bg-red-700 transition-colors shadow-sm w-full sm:w-auto"
                     >
-                      Fechar Reparação
+                      Fechar Processo Definitivamente
                     </button>
-                  )}
-                </div>
+                    <p className="text-xs text-slate-500 mt-2">Esta ação marcará a ordem de serviço como fechada e removerá o estado de pendência.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end items-center p-6 sm:p-8 border-t border-slate-100 bg-slate-50 shrink-0">
                 <div className="flex gap-3">
                   <button
                     type="button"

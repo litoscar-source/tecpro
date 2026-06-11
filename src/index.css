@@ -1,2 +1,75 @@
 @import "tailwindcss";
 
+@layer base {
+  .dark {
+    /* Neutral - Deep inversion for backgrounds & text */
+    --color-slate-50: oklch(20.8% 0.042 265.755); /* 900 */
+    --color-slate-100: oklch(27.9% 0.041 260.031); /* 800 */
+    --color-slate-200: oklch(37.2% 0.044 257.287); /* 700 */
+    --color-slate-300: oklch(44.6% 0.043 257.281); /* 600 */
+    --color-slate-400: oklch(55.4% 0.046 257.417); /* 500 */
+    --color-slate-500: oklch(70.4% 0.04 256.788); /* 400 */
+    --color-slate-600: oklch(86.9% 0.022 252.894); /* 300 */
+    --color-slate-700: oklch(92.9% 0.013 255.508); /* 200 */
+    --color-slate-800: oklch(96.8% 0.007 247.896); /* 100 */
+    --color-slate-900: oklch(98.4% 0.003 247.858); /* 50 */
+    
+    --color-white: oklch(14% 0.03 260); /* 950 approx */
+    --color-black: oklch(98.4% 0.003 247.858); /* 50 */
+
+    /* Badges & Accents - Invert extremes for readability */
+    /* Blue */
+    --color-blue-50: oklch(37.9% 0.146 265.522); /* 900 */
+    --color-blue-100: oklch(42.4% 0.199 265.638); /* 800 */
+    --color-blue-800: oklch(93.2% 0.032 255.585); /* 100 */
+    --color-blue-900: oklch(97% 0.014 254.604); /* 50 */
+
+    /* Emerald */
+    --color-emerald-50: oklch(37.8% 0.077 168.94); /* 900 */
+    --color-emerald-100: oklch(43.2% 0.095 166.913); /* 800 */
+    --color-emerald-800: oklch(95% 0.052 163.051); /* 100 */
+    --color-emerald-900: oklch(97.9% 0.021 166.113); /* 50 */
+
+    /* Red */
+    --color-red-50: oklch(39.6% 0.141 25.723); /* 900 */
+    --color-red-100: oklch(44.4% 0.177 26.899); /* 800 */
+    --color-red-800: oklch(93.6% 0.032 17.717); /* 100 */
+    --color-red-900: oklch(97.1% 0.013 17.38); /* 50 */
+
+    /* Amber */
+    --color-amber-50: oklch(47.3% 0.137 46.201); /* 800 approx */
+    --color-amber-100: oklch(47.3% 0.137 46.201); /* 800 */
+    --color-amber-800: oklch(96.2% 0.059 95.617); /* 100 */
+    --color-amber-900: oklch(98% 0.02 95); /* 50 approx */
+
+    /* Indigo */
+    --color-indigo-50: oklch(35.9% 0.144 278.697); /* 900 */
+    --color-indigo-100: oklch(39.8% 0.195 277.366); /* 800 */
+    --color-indigo-800: oklch(93% 0.034 272.788); /* 100 */
+    --color-indigo-900: oklch(96.2% 0.018 272.314); /* 50 */
+  }
+
+  /* Make inputs dark-themed appropriately if they use browser styling */
+  .dark {
+    color-scheme: dark;
+  }
+}
+
+@media print {
+  html.dark *, html.dark {
+    color-scheme: light !important;
+    --color-slate-50: oklch(98.4% 0.003 247.858) !important;
+    --color-slate-100: oklch(96.8% 0.007 247.896) !important;
+    --color-slate-200: oklch(92.9% 0.013 255.508) !important;
+    --color-slate-300: oklch(86.9% 0.022 252.894) !important;
+    --color-slate-400: oklch(70.4% 0.04 256.788) !important;
+    --color-slate-500: oklch(55.4% 0.046 257.417) !important;
+    --color-slate-600: oklch(44.6% 0.043 257.281) !important;
+    --color-slate-700: oklch(37.2% 0.044 257.287) !important;
+    --color-slate-800: oklch(27.9% 0.041 260.031) !important;
+    --color-slate-900: oklch(20.8% 0.042 265.755) !important;
+    --color-white: oklch(100% 0 0) !important;
+    --color-black: oklch(0% 0 0) !important;
+  }
+}
+

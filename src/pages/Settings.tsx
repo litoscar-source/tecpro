@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Settings as SettingsIcon, Save, Building, Phone, Mail, MapPin, Image as ImageIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Building, Phone, Mail, MapPin, Image as ImageIcon, Users, List, X, Plus, Palette, Moon, Sun } from 'lucide-react';
+import { Technician } from '../types';
 
 export function Settings() {
-  const { settings, updateSettings } = useStore();
+  const { theme, setTheme, settings, updateSettings, technicians, addTechnician, deleteTechnician } = useStore();
   const [formData, setFormData] = useState({
     companyName: settings?.companyName || '',
     legalName: settings?.legalName || '',
@@ -15,7 +16,16 @@ export function Settings() {
     postalCode: settings?.postalCode || '',
     logo: settings?.logo || '',
     orderSeries: settings?.orderSeries || new Date().getFullYear().toString(),
+    brands: settings?.brands || [],
+    deviceTypes: settings?.deviceTypes || [],
+    repairTerms: settings?.repairTerms || '',
+    includeTermsInPdf: settings?.includeTermsInPdf || false,
   });
+
+  const [newBrand, setNewBrand] = useState('');
+  const [newDeviceType, setNewDeviceType] = useState('');
+  const [newTechName, setNewTechName] = useState('');
+  const [newTechPin, setNewTechPin] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,17 +40,71 @@ export function Settings() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddBrand = () => {
+    if (newBrand.trim() && !formData.brands.includes(newBrand.trim())) {
+      setFormData({ ...formData, brands: [...formData.brands, newBrand.trim()] });
+      setNewBrand('');
+    }
+  };
+
+  const handleAddDeviceType = () => {
+    if (newDeviceType.trim() && !formData.deviceTypes.includes(newDeviceType.trim())) {
+      setFormData({ ...formData, deviceTypes: [...formData.deviceTypes, newDeviceType.trim()] });
+      setNewDeviceType('');
+    }
+  };
+
+  const handleAddTechnician = async () => {
+    if (newTechName.trim() && newTechPin.trim().length === 6) {
+      await addTechnician({
+        id: Date.now().toString(),
+        name: newTechName.trim(),
+        pin: newTechPin.trim(),
+        createdAt: new Date().toISOString()
+      });
+      setNewTechName('');
+      setNewTechPin('');
+    } else {
+      alert("PIN deve conter 6 dígitos e o nome é obrigatório.");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
+    await updateSettings(formData);
     alert('Configurações guardadas com sucesso!');
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl pb-12">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
         <p className="text-sm text-slate-500">Gerencie as informações da sua empresa.</p>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex items-center gap-2">
+          <Palette className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-medium text-slate-900">Aparência</h2>
+        </div>
+        <div className="p-6">
+          <label className="mb-2 block text-sm font-medium text-slate-700">Tema do Sistema</label>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setTheme('light')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${theme === 'light' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              <Sun className="h-4 w-4" /> Claro
+            </button>
+            <button
+              onClick={() => setTheme('dark')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${theme === 'dark' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              <Moon className="h-4 w-4" /> Escuro
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">A escolha do tema é guardada nas suas preferências locais.</p>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -190,6 +254,35 @@ export function Settings() {
             </div>
           </div>
 
+          <div className="border-t border-slate-200 pt-6">
+            <h3 className="mb-4 text-sm font-semibold text-slate-900">Configurações de Impressão</h3>
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={formData.includeTermsInPdf}
+                    onChange={(e) => setFormData({ ...formData, includeTermsInPdf: e.target.checked })}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Incluir Condições Gerais no rodapé dos documentos PDF
+                </label>
+              </div>
+              {formData.includeTermsInPdf && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Condições Gerais / Termos de Reparação</label>
+                  <textarea
+                    value={formData.repairTerms}
+                    onChange={(e) => setFormData({ ...formData, repairTerms: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    rows={6}
+                    placeholder="Introduza aqui os termos e condições gerais para constarem no rodapé dos orçamentos e comprovativos."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-end pt-4">
             <button
               type="submit"
@@ -200,6 +293,162 @@ export function Settings() {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Configurações de Listas */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex items-center gap-2">
+          <List className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-medium text-slate-900">Listas da Loja</h2>
+        </div>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Marcas */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-900 mb-3">Marcas Registadas</h3>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Ex: Apple, Samsung"
+                value={newBrand}
+                onChange={e => setNewBrand(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddBrand()}
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddBrand}
+                className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.brands.map(brand => (
+                <span key={brand} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                  {brand}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, brands: prev.brands.filter(b => b !== brand) }));
+                    }}
+                    className="text-slate-500 hover:text-red-500"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {formData.brands.length === 0 && <span className="text-xs text-slate-500 italic">Nenhuma marca configurada.</span>}
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Nota: Não se esqueça de clicar em "Guardar Alterações" lá em cima.</p>
+          </div>
+
+          {/* Tipos de Equipamento */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-900 mb-3">Tipos de Equipamento</h3>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Ex: Smartphone, Portátil"
+                value={newDeviceType}
+                onChange={e => setNewDeviceType(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddDeviceType()}
+                className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddDeviceType}
+                className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.deviceTypes.map(type => (
+                <span key={type} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                  {type}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, deviceTypes: prev.deviceTypes.filter(t => t !== type) }));
+                    }}
+                    className="text-slate-500 hover:text-red-500"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {formData.deviceTypes.length === 0 && <span className="text-xs text-slate-500 italic">Nenhum tipo configurado.</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Técnicos */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
+        <div className="border-b border-slate-200 bg-slate-50 px-6 py-4 flex items-center gap-2">
+          <Users className="h-5 w-5 text-slate-500" />
+          <h2 className="text-lg font-medium text-slate-900">Equipa / Técnicos</h2>
+        </div>
+        <div className="p-6">
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6 flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1 w-full">
+              <label className="mb-1 block text-sm font-medium text-slate-700">Nome do Técnico</label>
+              <input
+                type="text"
+                placeholder="Ex: João Silva"
+                value={newTechName}
+                onChange={e => setNewTechName(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="w-full sm:w-32">
+              <label className="mb-1 block text-sm font-medium text-slate-700">PIN (6 dígitos)</label>
+              <input
+                type="text"
+                maxLength={6}
+                placeholder="123456"
+                value={newTechPin}
+                onChange={e => setNewTechPin(e.target.value.replace(/\D/g, ''))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddTechnician}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar
+            </button>
+          </div>
+
+          {technicians.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-slate-100">Nenhum técnico registado.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {technicians.map(tech => (
+                <div key={tech.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:border-slate-300 bg-white">
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm">{tech.name}</p>
+                    <p className="text-xs text-slate-500 font-mono tracking-widest mt-0.5">******</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm(`Remover técnico ${tech.name}?`)) {
+                        await deleteTechnician(tech.id);
+                      }
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                    title="Remover"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">

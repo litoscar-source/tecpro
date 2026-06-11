@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wrench, Package, Settings, LogOut, Calendar, X } from 'lucide-react';
+import { LayoutDashboard, Users, Wrench, Package, Settings, LogOut, Calendar, X, BarChart2, Calculator } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -7,6 +7,8 @@ const navItems = [
   { name: 'Agenda', path: '/agenda', icon: Calendar },
   { name: 'Clientes', path: '/customers', icon: Users },
   { name: 'Stock', path: '/inventory', icon: Package },
+  { name: 'Relatórios', path: '/reports', icon: BarChart2 },
+  { name: 'Calculadora de Orçamentos', path: '/calculator', icon: Calculator },
 ];
 
 interface SidebarProps {

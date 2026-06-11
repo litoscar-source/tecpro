@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import { Users, Wrench, CheckCircle, Clock, DollarSign, Bell, AlertTriangle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
@@ -107,6 +107,37 @@ export function Dashboard() {
 
   const deviceData = Object.entries(deviceCounts).map(([name, value]) => ({ name, value }));
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#64748b'];
+
+  const pt_months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const chartData = pt_months.map((month, index) => {
+    const mOrders = orders.filter(o => {
+      if (o.status !== 'pronto' && o.status !== 'fechado') return false;
+      const date = new Date(o.completedAt || o.updatedAt);
+      return date.getMonth() === index && date.getFullYear() === currentYear;
+    });
+    
+    // Revenue from this month (labor + parts)
+    const rev = mOrders.reduce((sum, order) => {
+      let tC = Number(order.laborCost) || 0;
+      order.partsUsed?.forEach(p => {
+        const item = inventory.find(i => i.id === p.partId);
+        if (item) tC += item.price * p.quantity;
+      });
+      tC -= (Number(order.partsDiscount) || 0);
+      return sum + tC;
+    }, 0);
+
+    // Cost from this month (parts cost)
+    const cost = mOrders.reduce((acc, order) => {
+      const pCost = order.partsUsed?.reduce((sum, part) => {
+        const item = inventory.find(i => i.id === part.partId);
+        return sum + (item ? (item.cost || 0) * part.quantity : 0);
+      }, 0) || 0;
+      return acc + pCost;
+    }, 0);
+
+    return { name: month, Vendas: rev, Lucro: rev - cost };
+  });
 
   const recentOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
@@ -245,6 +276,31 @@ export function Dashboard() {
                 <p>Sem dados suficientes</p>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 mt-6">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h2 className="text-lg font-medium text-slate-900">Vendas e Lucro (Evolução Anual)</h2>
+          </div>
+          <div className="p-6 h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-slate-200)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--color-slate-500)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--color-slate-500)' }} tickFormatter={(val) => `${val}€`} />
+                <Tooltip 
+                  cursor={{ fill: 'var(--color-slate-50)' }} 
+                  formatter={(value: number) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value)}
+                  contentStyle={{ backgroundColor: 'var(--color-white)', borderColor: 'var(--color-slate-200)', color: 'var(--color-slate-900)' }}
+                />
+                <Legend iconType="circle" />
+                <Bar dataKey="Vendas" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="Lucro" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

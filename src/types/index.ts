@@ -21,6 +21,7 @@ export interface InventoryItem {
   serialNumber?: string;
   color?: string;
   quantity: number;
+  minStock?: number;
   price: number;
   cost: number;
   supplier?: string;
@@ -45,13 +46,19 @@ export interface ServiceOrder {
   status: OrderStatus;
   externalSupplier?: string;
   externalDispatchDate?: string;
+  externalReturnDate?: string;
   clientQuoteStatus?: 'pending' | 'accepted' | 'rejected';
   clientQuoteObservation?: string;
   clientQuoteDate?: string;
+  entryCondition?: string; // sujeito a custos, reclamação, garantia, retorno
+  repairLocation?: string; // interna, externa
+  testsPerformed?: string;
+  resolutionType?: string; // Reparação efetuada, orçamento recusado, sem reparação, etc.
+  deliveryMethod?: 'client' | 'carrier';
   partsUsed: { partId: string; quantity: number }[];
-  partsDiscount?: number;
-  laborCost: number;
-  totalCost: number;
+  partsDiscount?: number | '';
+  laborCost: number | '';
+  totalCost: number | '';
   paymentStatus?: 'pendente' | 'pago' | 'cancelado' | string;
   paymentMethod?: 'multibanco' | 'mbway' | 'dinheiro' | 'transferencia' | 'cartao' | string;
   paymentDate?: string;
@@ -71,7 +78,19 @@ export interface CompanySettings {
   postalCode: string;
   logo?: string;
   orderSeries: string;
+  brands?: string[];
+  deviceTypes?: string[];
+  repairTerms?: string;
+  includeTermsInPdf?: boolean;
 }
+
+export interface Technician {
+  id: string;
+  name: string;
+  pin: string;
+  createdAt: string;
+}
+
 
 export interface Appointment {
   id: string;

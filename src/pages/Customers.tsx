@@ -175,7 +175,7 @@ export function Customers() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh] my-auto">
+          <div className="w-full max-w-3xl rounded-xl bg-white shadow-xl flex flex-col max-h-[90vh] my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 p-4 shrink-0">
               <h2 className="text-lg font-semibold text-slate-900">
                 {editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}

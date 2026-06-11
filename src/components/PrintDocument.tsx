@@ -222,6 +222,12 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
             1. O equipamento foi testado e entregue em pleno funcionamento das reparações efetuadas. 2. Garantia de 90 dias sobre as peças substituídas e mão de obra aplicada, não cobrindo danos por mau uso, quedas ou líquidos.
           </p>
         )}
+        {settings.includeTermsInPdf && settings.repairTerms && (
+          <div className="mt-2 text-justify whitespace-pre-wrap">
+            <h5 className="font-bold mb-1 uppercase">Condições Gerais de Reparação</h5>
+            <p>{settings.repairTerms}</p>
+          </div>
+        )}
       </div>
 
       {type === 'orcamento' && (

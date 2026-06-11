@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { InventoryItem } from '../types';
 
 export function Inventory() {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useStore();
+  const { inventory, settings, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -18,6 +18,7 @@ export function Inventory() {
     serialNumber: '',
     color: '',
     quantity: 0,
+    minStock: 0,
     price: 0,
     cost: 0,
     supplier: '',
@@ -44,6 +45,7 @@ export function Inventory() {
         serialNumber: item.serialNumber || '',
         color: item.color || '',
         quantity: item.quantity,
+        minStock: item.minStock || 0,
         price: item.price,
         cost: item.cost,
         supplier: item.supplier || '',
@@ -52,7 +54,7 @@ export function Inventory() {
       });
     } else {
       setEditingItem(null);
-      setFormData({ name: '', description: '', brand: '', model: '', serialNumber: '', color: '', quantity: 0, price: 0, cost: 0, supplier: '', purchaseInvoice: '', purchaseDate: '' });
+      setFormData({ name: '', description: '', brand: '', model: '', serialNumber: '', color: '', quantity: 0, minStock: 0, price: 0, cost: 0, supplier: '', purchaseInvoice: '', purchaseDate: '' });
     }
     setIsModalOpen(true);
   };
@@ -131,10 +133,9 @@ export function Inventory() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ${
-                      item.quantity <= 2 ? 'bg-red-100 text-red-800' : 
-                      item.quantity <= 5 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                      (item.minStock && item.minStock > 0 && item.quantity <= item.minStock) ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800'
                     }`}>
-                      {item.quantity <= 5 && <AlertTriangle className="h-3 w-3" />}
+                      {(item.minStock && item.minStock > 0 && item.quantity <= item.minStock) && <AlertTriangle className="h-3 w-3" />}
                       {item.quantity} un
                     </span>
                   </td>
@@ -203,11 +204,17 @@ export function Inventory() {
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700">Marca</label>
                     <input
+                      list="inventory-brands-list"
                       type="text"
                       value={formData.brand}
                       onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                       className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
+                    <datalist id="inventory-brands-list">
+                      {settings?.brands?.map(b => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700">Modelo</label>
@@ -273,7 +280,7 @@ export function Inventory() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-slate-700">Quantidade</label>
                     <input
@@ -286,7 +293,17 @@ export function Inventory() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Custo Unitário (€)</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Stock Min.</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.minStock}
+                      onChange={(e) => setFormData({ ...formData, minStock: Number(e.target.value) })}
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Custo (€)</label>
                     <input
                       required
                       type="number"
@@ -298,7 +315,7 @@ export function Inventory() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Preço de Venda (€)</label>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">P. Venda (€)</label>
                     <input
                       required
                       type="number"
