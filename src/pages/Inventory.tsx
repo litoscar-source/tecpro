@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Search, Edit2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, AlertTriangle, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { InventoryItem } from '../types';
 
@@ -78,12 +78,16 @@ export function Inventory() {
     handleCloseModal();
   };
 
+  const totalCostValue = inventory.reduce((acc, item) => acc + (item.cost * item.quantity), 0);
+  const totalSaleValue = inventory.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const totalItemsCount = inventory.reduce((acc, item) => acc + item.quantity, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Stock</h1>
-          <p className="text-sm text-slate-500">Gerencie peças e componentes da assistência.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Stock & Inventário</h1>
+          <p className="text-sm text-slate-500">Gerencie peças e verifique o valor do seu stock.</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -92,6 +96,38 @@ export function Inventory() {
           <Plus className="h-4 w-4" />
           Novo Item
         </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+            <Package className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500">Total Peças em Stock</p>
+            <p className="text-2xl font-bold text-slate-900">{totalItemsCount}</p>
+          </div>
+        </div>
+        
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-slate-50 text-slate-600 rounded-lg">
+            <DollarSign className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500">Valor de Custo (Inventário)</p>
+            <p className="text-2xl font-bold text-slate-900">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalCostValue)}</p>
+          </div>
+        </div>
+        
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+            <TrendingUp className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500">Valor Potencial de Venda</p>
+            <p className="text-2xl font-bold text-slate-900">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalSaleValue)}</p>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">

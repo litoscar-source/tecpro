@@ -157,7 +157,7 @@ export function Orders() {
         paymentMethod: '',
         paymentDate: '',
       });
-      setSendWhatsApp(true);
+      setSendWhatsApp(false);
     }
     setActiveTab('resumo');
     setIsModalOpen(true);
@@ -231,7 +231,8 @@ export function Orders() {
       default: statusText = status;
     }
 
-    const message = `Olá, ${customerName}!\n\nO status da sua ordem de serviço ${orderId} foi atualizado para: *${statusText}*.\n\nQualquer dúvida, estamos ao dispor.`;
+    const companyPrefix = settings?.companyName ? `*${settings.companyName}* - ` : '';
+    const message = `${companyPrefix}Olá, ${customerName}!\n\nO status da sua ordem de serviço ${orderId} foi atualizado para: *${statusText}*.\n\nQualquer dúvida, estamos ao dispor.`;
     const url = `https://wa.me/351${cleanPhone}?text=${encodeURIComponent(message)}`;
     
     // Open in a new tab
@@ -528,9 +529,28 @@ export function Orders() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-slate-50 overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 shadow-sm z-10 shrink-0">
-            <h2 className="text-xl font-semibold text-slate-900">
-              {editingOrder ? `Editar Reparação: ${editingOrder.id.toUpperCase()}` : 'Nova Ordem de Reparação'}
-            </h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <h2 className="text-xl font-semibold text-slate-900">
+                {editingOrder ? `Editar Reparação: ${editingOrder.id.toUpperCase()}` : 'Nova Ordem de Reparação'}
+              </h2>
+              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg border border-slate-200">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-2">Estado:</span>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
+                  className="rounded-md border-slate-200 bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold shadow-sm text-blue-700"
+                >
+                  <option value="entrada">Entrada</option>
+                  <option value="diagnostico">Em Diagnóstico</option>
+                  <option value="orcamento">Orçamento</option>
+                  <option value="aguarda_peca">A Aguardar Peça</option>
+                  <option value="expedido">Expedido p/ Forn.</option>
+                  <option value="pronto">Pronto</option>
+                  <option value="fechado">Fechado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               {editingOrder && (
                 <div className="flex gap-2 mr-4 border-r border-slate-200 pr-4">
@@ -606,26 +626,7 @@ export function Orders() {
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                         <h3 className="font-semibold text-slate-900 text-lg">1. Detalhes de Receção</h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Status da OS</label>
-                          <select
-                            required
-                            value={formData.status}
-                            onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
-                            className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold mb-2"
-                          >
-                            <option value="entrada">Entrada</option>
-                            <option value="diagnostico">Diagnóstico</option>
-                            <option value="orcamento">Orçamento</option>
-                            <option value="aguarda_peca">A Aguardar Peça</option>
-                            <option value="expedido">Expedido p/ Fornecedor</option>
-                            <option value="pronto">Pronto</option>
-                            <option value="fechado">Fechado</option>
-                            <option value="cancelado">Cancelado</option>
-                          </select>
-                          {renderTabWhatsAppButton()}
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Condição</label>
                           <select
@@ -1439,7 +1440,7 @@ export function Orders() {
                     <>
                       <button
                         type="submit"
-                        onClick={() => submitActionRef.current = 'save_and_close'}
+                        onClick={() => submitActionRef.current = 'save_and_stay'}
                         className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
                       >
                         Registar
