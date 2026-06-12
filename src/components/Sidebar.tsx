@@ -6,7 +6,7 @@ const navItems = [
   { name: 'Ordens de Reparação', path: '/orders', icon: Wrench },
   { name: 'Agenda', path: '/agenda', icon: Calendar },
   { name: 'Clientes', path: '/customers', icon: Users },
-  { name: 'Stock', path: '/inventory', icon: Package },
+  { name: 'Inventário', path: '/inventory', icon: Package },
   { name: 'Relatórios', path: '/reports', icon: BarChart2 },
   { name: 'Calculadora de Orçamentos', path: '/calculator', icon: Calculator },
 ];

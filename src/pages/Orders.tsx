@@ -16,6 +16,8 @@ export function Orders() {
   const [statusFilter, setStatusFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<ServiceOrder | null>(null);
+  const [isFormReadOnly, setIsFormReadOnly] = useState(false);
+  const [showSavedSuccess, setShowSavedSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('resumo');
   
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
@@ -99,6 +101,7 @@ export function Orders() {
   const handleOpenModal = (order?: ServiceOrder) => {
     if (order) {
       setEditingOrder(order);
+      setIsFormReadOnly(true);
       setFormData({
         customerId: order.customerId,
         orderType: order.orderType || 'repair',
@@ -130,6 +133,7 @@ export function Orders() {
       setSendWhatsApp(false);
     } else {
       setEditingOrder(null);
+      setIsFormReadOnly(false);
       setFormData({
         customerId: '',
         orderType: 'repair',
@@ -341,7 +345,9 @@ export function Orders() {
     if (submitActionRef.current === 'save_and_stay') {
       const savedOrder = !isNewProcess ? orders.find(o => o.id === currentOrderId) : { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       setEditingOrder(savedOrder as ServiceOrder);
-      // alert('Alterações guardadas com sucesso.');
+      setIsFormReadOnly(true);
+      setShowSavedSuccess(true);
+      setTimeout(() => setShowSavedSuccess(false), 3000);
     } else if (submitActionRef.current === 'register_and_print') {
       const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
       handlePrint(savedOrder, 'entrada');
@@ -349,6 +355,9 @@ export function Orders() {
     } else if (submitActionRef.current === 'register_and_repair') {
       const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
       setEditingOrder(savedOrder);
+      setIsFormReadOnly(true);
+      setShowSavedSuccess(true);
+      setTimeout(() => setShowSavedSuccess(false), 3000);
       setActiveTab('reparacao');
     } else {
       handleCloseModal();
@@ -537,8 +546,9 @@ export function Orders() {
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-2">Estado:</span>
                 <select
                   value={formData.status}
+                  disabled={isFormReadOnly}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
-                  className="rounded-md border-slate-200 bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold shadow-sm text-blue-700"
+                  className="rounded-md border-slate-200 bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold shadow-sm text-blue-700 disabled:opacity-75 disabled:bg-slate-50"
                 >
                   <option value="entrada">Entrada</option>
                   <option value="diagnostico">Em Diagnóstico</option>
@@ -619,7 +629,8 @@ export function Orders() {
               </div>
 
               <div className="p-6 sm:p-8 flex-1 overflow-y-auto bg-slate-50/50">
-                {activeTab === 'resumo' && (
+                <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0">
+                  {activeTab === 'resumo' && (
                   <div className="max-w-4xl mx-auto space-y-8 pb-8">
                     {/* Section 1: Detalhes do Processo */}
                     <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -1423,17 +1434,23 @@ export function Orders() {
                 )}
               </div>
             )}
+            </fieldset>
           </div>
           
           <div className="flex justify-between items-center p-6 sm:px-8 sm:py-4 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 z-10">
-                <div>
+                <div className="flex items-center gap-4">
                   <button
                     type="button"
                     onClick={handleCloseModal}
                     className="rounded-lg px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                   >
-                    Cancelar
+                    {!editingOrder || !isFormReadOnly ? 'Cancelar' : 'Sair'}
                   </button>
+                  {showSavedSuccess && (
+                     <span className="text-emerald-600 font-bold text-sm bg-emerald-50 px-3 py-1 rounded-full animate-pulse flex items-center gap-1">
+                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Gravado
+                     </span>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   {!editingOrder ? (
@@ -1460,34 +1477,38 @@ export function Orders() {
                         Registar e Reparar
                       </button>
                     </>
+                  ) : isFormReadOnly ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handlePrint(editingOrder!, 'entrada')}
+                        className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        <Printer className="w-4 h-4" /> Imprimir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsFormReadOnly(false)}
+                        className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" /> Editar
+                      </button>
+                    </>
                   ) : (
                     <>
-                      {activeTab !== 'fecho' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (activeTab === 'resumo') setActiveTab('reparacao');
-                            else if (activeTab === 'reparacao') setActiveTab('testes');
-                            else if (activeTab === 'testes') setActiveTab('fecho');
-                          }}
-                          className="rounded-lg bg-slate-100 px-6 py-2.5 text-sm font-bold text-blue-700 hover:bg-slate-200 transition-colors shadow-sm"
-                        >
-                          Seguinte
-                        </button>
-                      )}
                       <button
                         type="submit"
                         onClick={() => submitActionRef.current = 'save_and_stay'}
                         className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2"
                       >
-                        Guardar Alterações
+                        Guardar
                       </button>
                       <button
                         type="submit"
                         onClick={() => submitActionRef.current = 'save_and_close'}
                         className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
                       >
-                        Guardar e Sair
+                        Guardar e Fechar
                       </button>
                     </>
                   )}
