@@ -629,8 +629,8 @@ export function Orders() {
               </div>
 
               <div className="p-6 sm:p-8 flex-1 overflow-y-auto bg-slate-50/50">
-                <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0">
                   {activeTab === 'resumo' && (
+                <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0">
                   <div className="max-w-4xl mx-auto space-y-8 pb-8">
                     {/* Section 1: Detalhes do Processo */}
                     <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
@@ -1007,6 +1007,7 @@ export function Orders() {
                       </div>
                     </section>
                   </div>
+                </fieldset>
                 )}
 
             {activeTab === 'reparacao' && (
@@ -1028,14 +1029,14 @@ export function Orders() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, status: 'diagnostico' })}
+                      onClick={() => { setIsFormReadOnly(false); setFormData({ ...formData, status: 'diagnostico' }); }}
                       className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
                     >
                       Iniciar Reparação
                     </button>
                   </div>
                 ) : (
-                  <>
+                  <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0"><div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-slate-700">Tipo de Reparação</label>
                       <div className="flex gap-4">
@@ -1266,12 +1267,14 @@ export function Orders() {
                     Os campos de relatório técnico, mão de obra e peças só estarão disponíveis após preencher a <strong>Data de Receção</strong> do equipamento.
                   </div>
                 )}
-                </>
+                </div>
+                </fieldset>
                 )}
               </div>
             )}
 
             {activeTab === 'testes' && (
+              <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0">
               <div className="space-y-6">
                 <div>
                   <h3 className="font-medium text-slate-900 border-b pb-2 mb-4">Testes Efetuados</h3>
@@ -1284,9 +1287,11 @@ export function Orders() {
                   />
                 </div>
               </div>
+              </fieldset>
             )}
 
             {activeTab === 'fecho' && (
+              <fieldset disabled={isFormReadOnly} className="min-w-0 border-0 p-0 m-0">
               <div className="space-y-6 max-w-2xl mx-auto">
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 flex sm:flex-row flex-col sm:items-center justify-between gap-4">
                   <div>
@@ -1433,8 +1438,8 @@ export function Orders() {
                   </div>
                 )}
               </div>
+              </fieldset>
             )}
-            </fieldset>
           </div>
           
           <div className="flex justify-between items-center p-6 sm:px-8 sm:py-4 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 z-10">
