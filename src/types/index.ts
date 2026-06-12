@@ -55,7 +55,7 @@ export interface ServiceOrder {
   testsPerformed?: string;
   resolutionType?: string; // Reparação efetuada, orçamento recusado, sem reparação, etc.
   deliveryMethod?: 'client' | 'carrier';
-  partsUsed: { partId: string; quantity: number }[];
+  partsUsed: { partId: string; quantity: number; isManual?: boolean; manualName?: string; manualPrice?: number }[];
   partsDiscount?: number | '';
   laborCost: number | '';
   totalCost: number | '';

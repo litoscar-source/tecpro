@@ -22,6 +22,13 @@ export function Calculator() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [triggerPrint, setTriggerPrint] = useState(false);
 
+  useEffect(() => {
+    if (settings) {
+      setLaborCostPerHour(settings.defaultLaborCostPerHour ?? 35);
+      setProfitMargin(settings.defaultProfitMargin ?? 30);
+    }
+  }, [settings?.defaultLaborCostPerHour, settings?.defaultProfitMargin]);
+
   const handleAddItem = () => {
     setItems([...items, { id: crypto.randomUUID(), isManual: false, partId: '', manualName: '', manualPrice: 0, quantity: 1 }]);
   };

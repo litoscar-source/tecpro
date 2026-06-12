@@ -36,6 +36,7 @@ export function Orders() {
   const [printData, setPrintData] = useState<{ order: ServiceOrder, type: 'entrada' | 'saida' | 'orcamento' } | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [labelOrder, setLabelOrder] = useState<ServiceOrder | null>(null);
+  const [submitAction, setSubmitAction] = useState<'save_and_close' | 'save_and_stay' | 'register_and_print' | 'register_and_repair' | 'save'>('save_and_close');
 
   const [formData, setFormData] = useState({
     customerId: '',
@@ -200,8 +201,12 @@ export function Orders() {
 
   const calculateTotalCost = () => {
     const partsCost = formData.partsUsed.reduce((acc, part) => {
-      const inventoryItem = inventory.find(i => i.id === part.partId);
-      return acc + (inventoryItem ? (inventoryItem.price || 0) * part.quantity : 0);
+      if (part.isManual) {
+        return acc + ((part.manualPrice || 0) * part.quantity);
+      } else {
+        const inventoryItem = inventory.find(i => i.id === part.partId);
+        return acc + (inventoryItem ? (inventoryItem.price || 0) * part.quantity : 0);
+      }
     }, 0);
     
     // Apply discount
@@ -261,8 +266,11 @@ export function Orders() {
     e.preventDefault();
     
     const totalCost = calculateTotalCost();
+    let currentOrderId = '';
+    let isNewProcess = false;
 
     if (editingOrder) {
+      currentOrderId = editingOrder.id;
       const statusChanged = formData.status !== editingOrder.status;
 
       updateOrder(editingOrder.id, {
@@ -280,6 +288,7 @@ export function Orders() {
         }
       }
     } else {
+      isNewProcess = true;
       const series = settings?.orderSeries || new Date().getFullYear().toString();
       let newId = `${series}-0001`;
       const seriesOrders = orders.filter(o => o.id.startsWith(`${series}-`));
@@ -290,6 +299,7 @@ export function Orders() {
         }
       }
 
+      currentOrderId = newId;
       addOrder({
         id: newId,
         ...formData,
@@ -298,7 +308,6 @@ export function Orders() {
         updatedAt: new Date().toISOString(),
       });
       
-      // We can also notify on creation
       if (sendWhatsApp) {
         const customer = customers.find(c => c.id === formData.customerId);
         if (customer && customer.phone) {
@@ -306,7 +315,22 @@ export function Orders() {
         }
       }
     }
-    handleCloseModal();
+
+    if (submitAction === 'save_and_stay') {
+      const savedOrder = !isNewProcess ? orders.find(o => o.id === currentOrderId) : { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setEditingOrder(savedOrder as ServiceOrder);
+      // alert('Alterações guardadas com sucesso.');
+    } else if (submitAction === 'register_and_print') {
+      const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
+      handlePrint(savedOrder, 'entrada');
+      handleCloseModal();
+    } else if (submitAction === 'register_and_repair') {
+      const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
+      setEditingOrder(savedOrder);
+      setActiveTab('reparacao');
+    } else {
+      handleCloseModal();
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -489,6 +513,17 @@ export function Orders() {
             <div className="flex items-center gap-2">
               {editingOrder && (
                 <div className="flex gap-2 mr-4 border-r border-slate-200 pr-4">
+                  <button type="button" onClick={() => {
+                    const customer = customers.find(c => c.id === formData.customerId);
+                    if (customer && customer.phone) {
+                      sendWhatsAppNotification(customer.phone, customer.name, editingOrder.id, formData.status);
+                    } else {
+                      alert('Cliente sem número de telefone associado.');
+                    }
+                  }} className="flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors mr-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                    WhatsApp
+                  </button>
                   <button type="button" onClick={() => handlePrint(editingOrder, 'entrada')} className="flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
                     <Printer className="h-4 w-4" /> Entrada
                   </button>
@@ -511,30 +546,53 @@ export function Orders() {
           
           <div className="flex-1 overflow-y-auto p-4 sm:p-8">
             <form onSubmit={handleSubmit} className="mx-auto max-w-5xl bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="flex items-center gap-6 px-6 sm:px-8 border-b border-slate-200 bg-slate-50 pt-4 overflow-x-auto">
-                <button type="button" onClick={() => setActiveTab('resumo')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === 'resumo' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Resumo / Entrada</button>
-                <button type="button" disabled={!editingOrder} onClick={() => setActiveTab('reparacao')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'reparacao' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Reparação</button>
-                <button type="button" disabled={formData.status === 'entrada'} onClick={() => setActiveTab('testes')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'testes' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Testes Efetuados</button>
-                <button type="button" disabled={formData.status === 'entrada'} onClick={() => setActiveTab('fecho')} className={`px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'fecho' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>Fechar Processo</button>
+              <div className="flex items-center px-4 sm:px-8 border-b border-slate-200 bg-slate-50 overflow-x-auto custom-scrollbar">
+                <div className="flex w-full min-w-max">
+                  {[
+                    { id: 'resumo', label: '1. Receção de Equipamento', desc: 'Cliente e Avaria' },
+                    { id: 'reparacao', label: '2. Intervenção Técnica', desc: 'Peças e Mão de Obra', disabled: !editingOrder },
+                    { id: 'testes', label: '3. Controlo de Qualidade', desc: 'Checklist e Testes', disabled: formData.status === 'entrada' },
+                    { id: 'fecho', label: '4. Fecho de Processo', desc: 'Resolução e Pagamento', disabled: formData.status === 'entrada' }
+                  ].map((tab, idx) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      disabled={tab.disabled}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`relative flex-1 flex flex-col items-start px-4 py-4 text-left transition-colors border-b-2 ${
+                        activeTab === tab.id
+                          ? 'border-blue-600 bg-white'
+                          : 'border-transparent text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      <span className={`text-sm font-bold ${activeTab === tab.id ? 'text-blue-700' : 'text-slate-700'}`}>
+                        {tab.label}
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5">{tab.desc}</span>
+                      {activeTab === tab.id && (
+                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="p-6 sm:p-8 flex-1 overflow-y-auto">
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto bg-slate-50/50">
                 {activeTab === 'resumo' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
-                    {/* Coluna Esquerda */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between border-b pb-2">
-                        <h3 className="font-medium text-slate-900">Dados da Entrada</h3>
+                  <div className="max-w-4xl mx-auto space-y-8 pb-8">
+                    {/* Section 1: Detalhes do Processo */}
+                    <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h3 className="font-semibold text-slate-900 text-lg">1. Detalhes de Receção</h3>
                       </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                           <label className="mb-1 block text-sm font-medium text-slate-700">Status da OS</label>
                           <select
                             required
                             value={formData.status}
                             onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
+                            className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
                           >
                             <option value="entrada">Entrada</option>
                             <option value="diagnostico">Diagnóstico</option>
@@ -547,7 +605,7 @@ export function Orders() {
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Condição de Entrada</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Condição</label>
                           <select
                             value={formData.entryCondition}
                             onChange={(e) => setFormData({ ...formData, entryCondition: e.target.value })}
@@ -560,7 +618,7 @@ export function Orders() {
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de Processo</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Tipo Processo</label>
                           <select
                             value={formData.orderType}
                             onChange={(e) => setFormData({ ...formData, orderType: e.target.value as 'repair' | 'service' })}
@@ -571,347 +629,351 @@ export function Orders() {
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-700">Método de Entrega</label>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Método Entrega</label>
                           <select
                             value={formData.deliveryMethod}
                             onChange={(e) => setFormData({ ...formData, deliveryMethod: e.target.value as 'client' | 'carrier' })}
                             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                           >
-                            <option value="client">Entregue pelo Cliente</option>
-                            <option value="carrier">Por Transportadora</option>
+                            <option value="client">Pelo Cliente</option>
+                            <option value="carrier">Transportadora</option>
                           </select>
                         </div>
                       </div>
+                    </section>
 
-                      <div className="flex items-center justify-between border-b pb-2 mt-4">
-                        <h3 className="font-medium text-slate-900">Dados do Cliente</h3>
+                    {/* Section 2: Cliente */}
+                    <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h3 className="font-semibold text-slate-900 text-lg">2. Identificação do Cliente</h3>
                         {pastCustomerOrders.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowHistoryModal('customer')}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
-                      >
-                        <Search className="h-3 w-3" /> Ver Histórico ({pastCustomerOrders.length})
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-sm font-medium text-slate-700">Cliente</label>
-                      {!showNewCustomerForm && (
-                        <button
-                          type="button"
-                          onClick={() => { setShowNewCustomerForm(true); setFormData({ ...formData, customerId: '' }); }}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                        >
-                          <Plus className="h-3 w-3" /> Novo Cliente
-                        </button>
-                      )}
-                    </div>
-                    
-                    {!showNewCustomerForm ? (
-                      <select
-                        required
-                        value={formData.customerId}
-                        onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="">Selecione um cliente...</option>
-                        {customers.map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="text-sm font-bold text-blue-900">Novo Cliente</h4>
                           <button
                             type="button"
-                            onClick={() => setShowNewCustomerForm(false)}
-                            className="text-slate-500 hover:text-slate-700"
+                            onClick={() => setShowHistoryModal('customer')}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
                           >
-                            <X className="h-4 w-4" />
+                            <Search className="h-3 w-3" /> Ver Histórico ({pastCustomerOrders.length})
                           </button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="col-span-2">
-                            <label className="mb-1 block text-xs font-medium text-slate-700">Nome <span className="text-red-500">*</span></label>
-                            <input
-                              required={showNewCustomerForm}
-                              type="text"
-                              value={newCustomerData.name}
-                              onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
-                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-700">Telefone</label>
-                            <input
-                              type="tel"
-                              value={newCustomerData.phone}
-                              onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
-                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1 block text-xs font-medium text-slate-700">NIF</label>
-                            <input
-                              type="text"
-                              value={newCustomerData.nif}
-                              onChange={(e) => setNewCustomerData({ ...newCustomerData, nif: e.target.value })}
-                              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500 bg-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="pt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={handleCreateQuickCustomer}
-                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-md font-medium hover:bg-blue-700 transition"
-                          >
-                            Criar e Selecionar
-                          </button>
-                        </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {formData.customerId && (
-                    <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 relative">
-                      {!isEditingCustomer ? (
-                        <>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-slate-700">Pesquisar ou Selecionar Cliente</label>
+                        {!showNewCustomerForm && (
                           <button
                             type="button"
-                            onClick={handleEditCustomer}
-                            className="absolute top-2 right-2 text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1"
+                            onClick={() => { setShowNewCustomerForm(true); setFormData({ ...formData, customerId: '' }); }}
+                            className="text-sm bg-slate-100 text-blue-700 hover:bg-slate-200 font-medium flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors"
                           >
-                            <Edit2 className="h-3 w-3" /> Editar
+                            <Plus className="h-4 w-4" /> Novo Cliente
                           </button>
-                          {(() => {
-                            const c = customers.find(c => c.id === formData.customerId);
-                            if (!c) return null;
-                            return (
-                              <div className="grid grid-cols-2 gap-y-2 gap-x-4 mt-2">
-                                <p><span className="font-medium text-slate-700">NIF:</span> {c.nif || '-'}</p>
-                                <p><span className="font-medium text-slate-700">Telefone:</span> {c.phone}</p>
-                                <p className="col-span-2"><span className="font-medium text-slate-700">Email:</span> {c.email}</p>
-                                <p className="col-span-2"><span className="font-medium text-slate-700">Morada:</span> {c.address}, {c.postalCode} {c.city}</p>
-                              </div>
-                            );
-                          })()}
-                        </>
+                        )}
+                      </div>
+                      
+                      {!showNewCustomerForm ? (
+                        <select
+                          required
+                          value={formData.customerId}
+                          onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm"
+                        >
+                          <option value="">Insira o nome, NIF ou telefone...</option>
+                          {customers.map(c => (
+                            <option key={c.id} value={c.id}>{c.name} - {c.phone} {c.nif && `(NIF: ${c.nif})`}</option>
+                          ))}
+                        </select>
                       ) : (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-700">NIF</label>
+                        <div className="bg-blue-50/50 p-5 rounded-xl border border-blue-100 space-y-4">
+                          <div className="flex justify-between items-center mb-1">
+                            <h4 className="text-sm font-bold text-blue-900">Novo Cliente</h4>
+                            <button
+                              type="button"
+                              onClick={() => setShowNewCustomerForm(false)}
+                              className="text-slate-500 hover:text-slate-700 bg-white p-1 rounded-md shadow-sm"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="sm:col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-slate-700">Nome Completo <span className="text-red-500">*</span></label>
                               <input
+                                required={showNewCustomerForm}
                                 type="text"
-                                value={customerFormData.nif || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, nif: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                                value={newCustomerData.name}
+                                onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
                               />
                             </div>
                             <div>
                               <label className="mb-1 block text-xs font-medium text-slate-700">Telefone</label>
                               <input
-                                type="text"
-                                value={customerFormData.phone || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, phone: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                                type="tel"
+                                value={newCustomerData.phone}
+                                onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
                               />
                             </div>
-                            <div className="col-span-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-700">NIF</label>
+                              <input
+                                type="text"
+                                value={newCustomerData.nif}
+                                onChange={(e) => setNewCustomerData({ ...newCustomerData, nif: e.target.value })}
+                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
+                              />
+                            </div>
+                            <div className="sm:col-span-2">
                               <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
                               <input
                                 type="email"
-                                value={customerFormData.email || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, email: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <label className="mb-1 block text-xs font-medium text-slate-700">Morada</label>
-                              <input
-                                type="text"
-                                value={customerFormData.address || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, address: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-700">Cód. Postal</label>
-                              <input
-                                type="text"
-                                value={customerFormData.postalCode || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, postalCode: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-xs font-medium text-slate-700">Localidade</label>
-                              <input
-                                type="text"
-                                value={customerFormData.city || ''}
-                                onChange={(e) => setCustomerFormData({ ...customerFormData, city: e.target.value })}
-                                className="w-full rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                                value={newCustomerData.email}
+                                onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
                               />
                             </div>
                           </div>
-                          <div className="flex justify-end gap-2 pt-2">
+                          <div className="pt-2 flex justify-end">
                             <button
                               type="button"
-                              onClick={() => setIsEditingCustomer(false)}
-                              className="text-xs px-2 py-1 rounded text-slate-600 hover:bg-slate-200"
+                              onClick={handleCreateQuickCustomer}
+                              className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
                             >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSaveCustomer}
-                              className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                              Guardar Cliente
+                              Guardar e Selecionar Cliente
                             </button>
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
-                </div>
 
-                {/* Coluna Direita */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="font-medium text-slate-900">Tipo de Serviço & Equipamento</h3>
-                    {pastDeviceOrders.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowHistoryModal('device')}
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
-                      >
-                        <Search className="h-3 w-3" /> Ver Histórico ({pastDeviceOrders.length})
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de Ordem</label>
-                    <select
-                      value={formData.orderType}
-                      onChange={(e) => setFormData({ ...formData, orderType: e.target.value as 'repair' | 'service' })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="repair">Ordem de Reparação</option>
-                      <option value="service">Prestação de Serviços</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Tipo {formData.orderType === 'service' && '(Opcional)'}</label>
-                      <input
-                        required={formData.orderType === 'repair'}
-                        list="device-types-list"
-                        type="text"
-                        placeholder="Ex: Telemóvel"
-                        value={formData.deviceType}
-                        onChange={(e) => setFormData({ ...formData, deviceType: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                      <datalist id="device-types-list">
-                        {settings?.deviceTypes?.map(t => (
-                          <option key={t} value={t} />
-                        ))}
-                      </datalist>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Marca {formData.orderType === 'service' && '(Opcional)'}</label>
-                      <input
-                        required={formData.orderType === 'repair'}
-                        list="brands-list"
-                        type="text"
-                        placeholder="Ex: Apple"
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                      <datalist id="brands-list">
-                        {settings?.brands?.map(b => (
-                          <option key={b} value={b} />
-                        ))}
-                      </datalist>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Modelo {formData.orderType === 'service' && '(Opcional)'}</label>
-                      <input
-                        required={formData.orderType === 'repair'}
-                        type="text"
-                        placeholder="Ex: iPhone 13"
-                        value={formData.model}
-                        onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Nº Série / IMEI</label>
-                      <input
-                        type="text"
-                        value={formData.serialNumber}
-                        onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Estado do Equipamento</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Marcas de uso, ecrã riscado"
-                        value={formData.deviceCondition}
-                        onChange={(e) => setFormData({ ...formData, deviceCondition: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-slate-700">Acessórios Deixados</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Carregador, Capa"
-                        value={formData.accessories}
-                        onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                      {formData.customerId && !showNewCustomerForm && (
+                        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600 relative">
+                          {!isEditingCustomer ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={handleEditCustomer}
+                                className="absolute top-3 right-3 text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1 bg-white px-2 py-1 rounded shadow-sm"
+                              >
+                                <Edit2 className="h-3 w-3" /> Editar
+                              </button>
+                              {(() => {
+                                const c = customers.find(c => c.id === formData.customerId);
+                                if (!c) return null;
+                                return (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4">
+                                    <p><span className="font-medium text-slate-700 block text-xs mb-0.5">NIF</span> {c.nif || '-'}</p>
+                                    <p><span className="font-medium text-slate-700 block text-xs mb-0.5">Telefone</span> {c.phone || '-'}</p>
+                                    <p className="md:col-span-2"><span className="font-medium text-slate-700 block text-xs mb-0.5">Email</span> {c.email || '-'}</p>
+                                    <p className="md:col-span-4"><span className="font-medium text-slate-700 block text-xs mb-0.5">Morada</span> {c.address ? `${c.address}, ${c.postalCode} ${c.city}` : '-'}</p>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-slate-900 border-b border-slate-200 pb-1">Atualizar Dados do Cliente</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">NIF</label>
+                                  <input
+                                    type="text"
+                                    value={customerFormData.nif || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, nif: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">Telefone</label>
+                                  <input
+                                    type="text"
+                                    value={customerFormData.phone || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, phone: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                                  <input
+                                    type="email"
+                                    value={customerFormData.email || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, email: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">Morada</label>
+                                  <input
+                                    type="text"
+                                    value={customerFormData.address || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, address: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">Cód. Postal</label>
+                                  <input
+                                    type="text"
+                                    value={customerFormData.postalCode || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, postalCode: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="mb-1 block text-xs font-medium text-slate-700">Localidade</label>
+                                  <input
+                                    type="text"
+                                    value={customerFormData.city || ''}
+                                    onChange={(e) => setCustomerFormData({ ...customerFormData, city: e.target.value })}
+                                    className="w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsEditingCustomer(false)}
+                                  className="text-sm px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleSaveCustomer}
+                                  className="text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                >
+                                  Guardar Cliente
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </section>
 
-                  <div className="pt-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.isWarranty}
-                        onChange={(e) => setFormData({ ...formData, isWarranty: e.target.checked })}
-                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      Reparação ao abrigo da Garantia
-                    </label>
+                    {/* Section 3: Equipamento e Avaria */}
+                    <section className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <h3 className="font-semibold text-slate-900 text-lg">3. Equipamento e Condições</h3>
+                        {pastDeviceOrders.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowHistoryModal('device')}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 bg-blue-50 px-2 py-1 rounded"
+                          >
+                            <Search className="h-3 w-3" /> Histórico deste Equipamento ({pastDeviceOrders.length})
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Tipo de Equipamento {formData.orderType === 'service' && '(Opcional)'}</label>
+                          <input
+                            required={formData.orderType === 'repair'}
+                            list="device-types-list"
+                            type="text"
+                            placeholder="Ex: Telemóvel"
+                            value={formData.deviceType}
+                            onChange={(e) => setFormData({ ...formData, deviceType: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          />
+                          <datalist id="device-types-list">
+                            {settings?.deviceTypes?.map(t => (
+                              <option key={t} value={t} />
+                            ))}
+                          </datalist>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Marca {formData.orderType === 'service' && '(Opcional)'}</label>
+                          <input
+                            required={formData.orderType === 'repair'}
+                            list="brands-list"
+                            type="text"
+                            placeholder="Ex: Apple"
+                            value={formData.brand}
+                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          />
+                          <datalist id="brands-list">
+                            {settings?.brands?.map(b => (
+                              <option key={b} value={b} />
+                            ))}
+                          </datalist>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Modelo {formData.orderType === 'service' && '(Opcional)'}</label>
+                          <input
+                            required={formData.orderType === 'repair'}
+                            type="text"
+                            placeholder="Ex: iPhone 13"
+                            value={formData.model}
+                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Nº Série / IMEI</label>
+                          <input
+                            type="text"
+                            value={formData.serialNumber}
+                            onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-slate-700">Acessórios Deixados</label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Carregador, Capa, Embalagem"
+                            value={formData.accessories}
+                            onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="mb-1 block text-sm font-medium text-slate-700">Estado Físico do Equipamento</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Marcas de uso gerais, ecrã com risco profundo no canto superior"
+                          value={formData.deviceCondition}
+                          onChange={(e) => setFormData({ ...formData, deviceCondition: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                          {formData.orderType === 'service' ? 'Descrição do Serviço Pretendido' : 'Avaria Reportada pelo Cliente'} <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          required
+                          value={formData.issueDescription}
+                          onChange={(e) => setFormData({ ...formData, issueDescription: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          rows={4}
+                          placeholder="Descreva detalhadamente o problema relatado..."
+                        />
+                      </div>
+
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <label className="flex items-center gap-3 text-sm font-medium text-amber-900 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.isWarranty}
+                            onChange={(e) => setFormData({ ...formData, isWarranty: e.target.checked })}
+                            className="h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          Equipamento ao abrigo da Garantia
+                        </label>
+                      </div>
+                    </section>
                   </div>
-                  
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">{formData.orderType === 'service' ? 'Descrição do Serviço' : 'Avaria Reportada'}</label>
-                    <textarea
-                      required
-                      value={formData.issueDescription}
-                      onChange={(e) => setFormData({ ...formData, issueDescription: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+                )}
 
             {activeTab === 'reparacao' && (
               <div className="space-y-6">
@@ -1025,13 +1087,22 @@ export function Orders() {
                     <div>
                       <div className="flex items-center justify-between mb-1 mt-4">
                         <label className="block text-sm font-medium text-slate-700">Peças Utilizadas & Componentes</label>
-                        <button 
-                          type="button"
-                          onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1 }] })}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          + Adicionar Peça
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1, isManual: false }] })}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            + Do Inventário
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1, isManual: true, manualName: '', manualPrice: 0 }] })}
+                            className="text-xs text-amber-600 hover:text-amber-800 font-medium"
+                          >
+                            + Manual
+                          </button>
+                        </div>
                       </div>
                       
                       {formData.partsUsed.length === 0 ? (
@@ -1040,20 +1111,49 @@ export function Orders() {
                         <div className="space-y-2">
                           {formData.partsUsed.map((part, index) => (
                             <div key={index} className="flex gap-2 items-center">
-                              <select
-                                value={part.partId}
-                                onChange={(e) => {
-                                  const newParts = [...formData.partsUsed];
-                                  newParts[index].partId = e.target.value;
-                                  setFormData({ ...formData, partsUsed: newParts });
-                                }}
-                                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
-                              >
-                                <option value="">Selecione...</option>
-                                {inventory.map(i => (
-                                  <option key={i.id} value={i.id}>{i.name} - {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(i.price)}</option>
-                                ))}
-                              </select>
+                              {!part.isManual ? (
+                                <select
+                                  value={part.partId}
+                                  onChange={(e) => {
+                                    const newParts = [...formData.partsUsed];
+                                    newParts[index].partId = e.target.value;
+                                    setFormData({ ...formData, partsUsed: newParts });
+                                  }}
+                                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                                >
+                                  <option value="">Selecione do inventário...</option>
+                                  {inventory.map(i => (
+                                    <option key={i.id} value={i.id}>{i.name} - {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(i.price)}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <>
+                                  <input
+                                    type="text"
+                                    placeholder="Nome da peça"
+                                    value={part.manualName || ''}
+                                    onChange={(e) => {
+                                      const newParts = [...formData.partsUsed];
+                                      newParts[index].manualName = e.target.value;
+                                      setFormData({ ...formData, partsUsed: newParts });
+                                    }}
+                                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                                  />
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Preço €"
+                                    value={part.manualPrice || 0}
+                                    onChange={(e) => {
+                                      const newParts = [...formData.partsUsed];
+                                      newParts[index].manualPrice = Number(e.target.value);
+                                      setFormData({ ...formData, partsUsed: newParts });
+                                    }}
+                                    className="w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                                  />
+                                </>
+                              )}
                               <input
                                 type="number"
                                 min="1"
@@ -1064,6 +1164,7 @@ export function Orders() {
                                   setFormData({ ...formData, partsUsed: newParts });
                                 }}
                                 className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+                                placeholder="Qtd"
                               />
                               <button
                                 type="button"
@@ -1072,7 +1173,7 @@ export function Orders() {
                                   newParts.splice(index, 1);
                                   setFormData({ ...formData, partsUsed: newParts });
                                 }}
-                                className="text-red-500 hover:text-red-700 p-1"
+                                className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -1283,21 +1384,72 @@ export function Orders() {
             )}
           </div>
           
-          <div className="flex justify-end items-center p-6 sm:p-8 border-t border-slate-100 bg-slate-50 shrink-0">
-                <div className="flex gap-3">
+          <div className="flex justify-between items-center p-6 sm:px-8 sm:py-4 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] shrink-0 z-10">
+                <div>
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="rounded-lg px-6 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+                    className="rounded-lg px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                   >
                     Cancelar
                   </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
-                  >
-                    Guardar Reparação
-                  </button>
+                </div>
+                <div className="flex gap-3">
+                  {!editingOrder ? (
+                    <>
+                      <button
+                        type="submit"
+                        onClick={() => setSubmitAction('save_and_close')}
+                        className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm"
+                      >
+                        Registar
+                      </button>
+                      <button
+                        type="submit"
+                        onClick={() => setSubmitAction('register_and_print')}
+                        className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                      >
+                        Registar e Imprimir
+                      </button>
+                      <button
+                        type="submit"
+                        onClick={() => setSubmitAction('register_and_repair')}
+                        className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                      >
+                        Registar e Reparar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {activeTab !== 'fecho' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeTab === 'resumo') setActiveTab('reparacao');
+                            else if (activeTab === 'reparacao') setActiveTab('testes');
+                            else if (activeTab === 'testes') setActiveTab('fecho');
+                          }}
+                          className="rounded-lg bg-slate-100 px-6 py-2.5 text-sm font-bold text-blue-700 hover:bg-slate-200 transition-colors shadow-sm"
+                        >
+                          Seguinte
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        onClick={() => setSubmitAction('save_and_stay')}
+                        className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        Guardar Alterações
+                      </button>
+                      <button
+                        type="submit"
+                        onClick={() => setSubmitAction('save_and_close')}
+                        className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                      >
+                        Guardar e Sair
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </form>

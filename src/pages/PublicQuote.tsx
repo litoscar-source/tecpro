@@ -8,6 +8,9 @@ export function PublicQuote() {
   const { orders, customers, settings, updateOrder, inventory, isLoading } = useStore();
   const [observation, setObservation] = useState('');
   
+  const [showConfirmModal, setShowConfirmModal] = useState<'accepted' | 'rejected' | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   const order = orders.find(o => o.id === id);
   const customer = order ? customers.find(c => c.id === order.customerId) : null;
   
@@ -53,16 +56,17 @@ export function PublicQuote() {
     );
   }
 
-  const handleResponse = (status: 'accepted' | 'rejected') => {
-    if (window.confirm(`Tem a certeza que deseja ${status === 'accepted' ? 'aceitar' : 'recusar'} este orçamento?`)) {
+  const handleResponse = () => {
+    if (showConfirmModal) {
       updateOrder(order.id, {
-        clientQuoteStatus: status,
+        clientQuoteStatus: showConfirmModal,
         clientQuoteObservation: observation,
         clientQuoteDate: new Date().toISOString(),
         // Ao aceitar o orçamento, pode passar automaticamente de status
-        status: status === 'accepted' ? 'aguarda_peca' : 'cancelado'
+        status: showConfirmModal === 'accepted' ? 'aguarda_peca' : 'cancelado'
       });
-      alert(`Orçamento ${status === 'accepted' ? 'aceite' : 'recusado'} com sucesso.`);
+      setShowConfirmModal(null);
+      setSuccessMessage(`Orçamento ${showConfirmModal === 'accepted' ? 'aceite' : 'recusado'} com sucesso.`);
     }
   };
 
@@ -173,13 +177,13 @@ export function PublicQuote() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
-                    onClick={() => handleResponse('accepted')}
+                    onClick={() => setShowConfirmModal('accepted')}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex justify-center items-center gap-2"
                   >
                     <CheckCircle className="h-5 w-5" /> Aceitar Orçamento
                   </button>
                   <button
-                    onClick={() => handleResponse('rejected')}
+                    onClick={() => setShowConfirmModal('rejected')}
                     className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-3 px-4 rounded-lg transition-colors flex justify-center items-center gap-2"
                   >
                     <X className="h-5 w-5" /> Recusar
@@ -190,6 +194,59 @@ export function PublicQuote() {
           </div>
         </div>
       </div>
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 p-6 text-center transform transition-all">
+            <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${showConfirmModal === 'accepted' ? 'bg-emerald-100' : 'bg-red-100'} mb-4`}>
+              {showConfirmModal === 'accepted' ? (
+                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Confirmar Ação</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Tem a certeza que deseja {showConfirmModal === 'accepted' ? 'aceitar' : 'recusar'} o orçamento da ordem de serviço {order.id}?
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => setShowConfirmModal(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResponse}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  showConfirmModal === 'accepted' ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500' : 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                }`}
+              >
+                Sim, {showConfirmModal === 'accepted' ? 'Aceitar' : 'Recusar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200 p-6 text-center transform transition-all">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
+              <CheckCircle className="h-6 w-6 text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Sucesso</h3>
+            <p className="text-sm text-slate-500 mb-6">{successMessage}</p>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="px-6 py-2 text-sm font-medium text-white rounded-lg bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 w-full"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

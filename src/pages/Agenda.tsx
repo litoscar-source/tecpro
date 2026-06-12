@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { Plus, Search, Calendar as CalendarIcon, Clock, User, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Calendar as CalendarIcon, Clock, User, FileText, CheckCircle, XCircle, X } from 'lucide-react';
 import { Appointment } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export function Agenda() {
-  const { appointments, customers, addAppointment, updateAppointment, deleteAppointment } = useStore();
+  const { appointments, customers, addAppointment, updateAppointment, deleteAppointment, addCustomer } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    nif: '',
+    address: '',
+    postalCode: '',
+    city: ''
+  });
 
   const [formData, setFormData] = useState({
     customerId: '',
@@ -25,6 +36,30 @@ export function Agenda() {
     return searchString.includes(searchTerm.toLowerCase());
   }).sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
 
+  const handleCreateQuickCustomer = () => {
+    if (!newCustomerData.name) {
+      alert("O nome do cliente é obrigatório.");
+      return;
+    }
+    const newId = uuidv4();
+    addCustomer({
+      id: newId,
+      ...newCustomerData,
+      createdAt: new Date().toISOString()
+    });
+    setFormData({ ...formData, customerId: newId });
+    setShowNewCustomerForm(false);
+    setNewCustomerData({
+      name: '',
+      phone: '',
+      email: '',
+      nif: '',
+      address: '',
+      postalCode: '',
+      city: ''
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingAppointment) {
@@ -40,6 +75,7 @@ export function Agenda() {
   };
 
   const openModal = (appointment?: Appointment) => {
+    setShowNewCustomerForm(false);
     if (appointment) {
       setEditingAppointment(appointment);
       setFormData({
@@ -178,20 +214,85 @@ export function Agenda() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
-                    <select
-                      required
-                      value={formData.customerId}
-                      onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                    >
-                      <option value="" disabled>Selecione um cliente</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-slate-700">Cliente</label>
+                      {!showNewCustomerForm && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowNewCustomerForm(true); setFormData({ ...formData, customerId: '' }); }}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <Plus className="h-3 w-3" /> Novo Cliente
+                        </button>
+                      )}
+                    </div>
+                    {!showNewCustomerForm ? (
+                      <select
+                        required
+                        value={formData.customerId}
+                        onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                        className="w-full rounded-md border border-slate-300 p-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="" disabled>Selecione um cliente</option>
+                        {customers.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} - {c.phone} {c.nif && `(NIF: ${c.nif})`}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="text-sm font-bold text-blue-900">Novo Cliente</h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowNewCustomerForm(false)}
+                            className="text-slate-500 hover:text-slate-700 bg-white p-1 rounded-md shadow-sm"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="mb-1 block text-xs font-medium text-slate-700">Nome <span className="text-red-500">*</span></label>
+                            <input
+                              required={showNewCustomerForm}
+                              type="text"
+                              value={newCustomerData.name}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-700">Telefone</label>
+                            <input
+                              type="tel"
+                              value={newCustomerData.phone}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                            <input
+                              type="email"
+                              value={newCustomerData.email}
+                              onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 shadow-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleCreateQuickCustomer}
+                            className="text-sm bg-blue-600 text-white px-3 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
+                          >
+                            Guardar e Selecionar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
