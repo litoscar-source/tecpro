@@ -8,7 +8,7 @@ import { pt } from 'date-fns/locale';
 import { PrintDocument } from '../components/PrintDocument';
 import { PrintLabelModal } from '../components/PrintLabelModal';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 export function Orders() {
   const { orders, customers, inventory, settings, addOrder, updateOrder, deleteOrder, updateCustomer, addCustomer } = useStore();
@@ -1569,7 +1569,7 @@ export function Orders() {
       {printData && settings && (
         <PrintDocument
           order={printData.order}
-          customer={customers.find(c => c.id === printData.order.customerId)!}
+          customer={customers.find(c => c.id === printData.order.customerId) || { name: 'Cliente Removido' } as Customer}
           inventory={inventory}
           settings={settings}
           type={printData.type}

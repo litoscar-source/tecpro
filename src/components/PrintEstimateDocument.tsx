@@ -72,14 +72,15 @@ export function PrintEstimateDocument({
       id="print-estimate-root" 
       className="p-6 font-sans text-xs flex flex-col"
       style={{
-        position: 'absolute',
-        left: '-9999px',
+        position: 'fixed',
+        left: 0,
         top: 0,
         width: '800px',
         minHeight: '1123px',
         zIndex: -1000,
         backgroundColor: colors.white,
-        color: colors.black
+        color: colors.black,
+        pointerEvents: 'none'
       }}
     >
       <div className="flex-1">

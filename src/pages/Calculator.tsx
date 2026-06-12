@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Calculator as CalculatorIcon, Plus, Trash2, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import { PrintEstimateDocument } from '../components/PrintEstimateDocument';
 
 export function Calculator() {
