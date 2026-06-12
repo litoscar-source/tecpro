@@ -333,7 +333,7 @@ export function Customers() {
                           <td className="px-4 py-3">{order.orderType === 'service' && !order.brand ? '(Serviço)' : `${order.brand} ${order.model}`}</td>
                           <td className="px-4 py-3 truncate max-w-[200px]" title={order.issueDescription}>{order.issueDescription}</td>
                           <td className="px-4 py-3">{getStatusBadge(order.status)}</td>
-                          <td className="px-4 py-3 font-medium">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(order.totalCost)}</td>
+                          <td className="px-4 py-3 font-medium">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(Number(order.totalCost))}</td>
                           <td className="px-4 py-3">{format(new Date(order.createdAt), "dd/MM/yyyy", { locale: pt })}</td>
                         </tr>
                       ))}

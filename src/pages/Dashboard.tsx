@@ -58,7 +58,7 @@ export function Dashboard() {
 
   const totalRevenue = orders
     .filter(o => o.status === 'pronto' || o.status === 'fechado')
-    .reduce((acc, order) => acc + order.totalCost, 0);
+    .reduce((acc, order) => acc + Number(order.totalCost), 0);
 
   const monthlyRevenue = orders
     .filter(o => {
@@ -66,7 +66,7 @@ export function Dashboard() {
       const orderDate = new Date(o.completedAt || o.updatedAt);
       return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
     })
-    .reduce((acc, order) => acc + order.totalCost, 0);
+    .reduce((acc, order) => acc + Number(order.totalCost), 0);
 
   const monthlyPartsCost = orders
     .filter(o => {

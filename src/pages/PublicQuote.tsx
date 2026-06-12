@@ -143,11 +143,11 @@ export function PublicQuote() {
                 ) : null}
                 <div className="flex justify-between">
                   <span className="text-slate-600">Mão de Obra Estimada</span>
-                  <span className="text-slate-900">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(order.laborCost)}</span>
+                  <span className="text-slate-900">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(Number(order.laborCost))}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg pt-3 border-t border-slate-100">
                   <span className="text-slate-900">Total Estimado</span>
-                  <span className="text-blue-600">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(order.totalCost)}</span>
+                  <span className="text-blue-600">{new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(Number(order.totalCost))}</span>
                 </div>
               </div>
             </div>

@@ -169,12 +169,12 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
                   </tr>
                 );
               })}
-              {order.laborCost > 0 && (
+              {Number(order.laborCost) > 0 && (
                 <tr className="border-b" style={{ borderColor: colors.slate200 }}>
                   <td className="py-1 px-2">Mão de Obra / Serviço Técnico</td>
                   <td className="py-1 px-2 text-center">1</td>
-                  <td className="py-1 px-2 text-right">{formatCurrency(order.laborCost)}</td>
-                  <td className="py-1 px-2 text-right">{formatCurrency(order.laborCost)}</td>
+                  <td className="py-1 px-2 text-right">{formatCurrency(Number(order.laborCost))}</td>
+                  <td className="py-1 px-2 text-right">{formatCurrency(Number(order.laborCost))}</td>
                 </tr>
               )}
             </tbody>
@@ -188,11 +188,11 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
               </div>
               <div className="flex justify-between py-1">
                 <span className="font-semibold">Mão de Obra:</span>
-                <span>{formatCurrency(order.laborCost)}</span>
+                <span>{formatCurrency(Number(order.laborCost))}</span>
               </div>
               <div className="flex justify-between py-1 mt-1 text-sm font-bold border-t-2" style={{ borderColor: colors.slate800 }}>
                 <span>Total:</span>
-                <span>{formatCurrency(order.totalCost)}</span>
+                <span>{formatCurrency(Number(order.totalCost))}</span>
               </div>
               {type === 'orcamento' && (
                 <p className="text-[10px] mt-1 text-right" style={{ color: colors.slate500 }}>Orçamento válido por 15 dias.</p>
@@ -234,7 +234,7 @@ export function PrintDocument({ order, customer, inventory, settings, type }: Pr
         <div className="mt-4 p-3 border rounded text-[11px]" style={{ borderColor: colors.slate400 }}>
           <p className="font-bold mb-2">Decisão do Cliente:</p>
           <div className="space-y-2">
-            <p>(&nbsp;&nbsp;&nbsp;) <strong>Aceito</strong> o Orçamento no valor de: {formatCurrency(order.totalCost)}</p>
+            <p>(&nbsp;&nbsp;&nbsp;) <strong>Aceito</strong> o Orçamento no valor de: {formatCurrency(Number(order.totalCost))}</p>
             <p>(&nbsp;&nbsp;&nbsp;) <strong>Recuso</strong> o orçamento. Tenho conhecimento que podem ser aplicadas taxas de diagnóstico.</p>
             <p>(&nbsp;&nbsp;&nbsp;) <strong>Autorizo a reciclagem</strong> do equipamento.</p>
           </div>
