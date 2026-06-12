@@ -355,7 +355,7 @@ export function Orders() {
     } else if (submitActionRef.current === 'register_and_repair') {
       const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
       setEditingOrder(savedOrder);
-      setIsFormReadOnly(true);
+      setIsFormReadOnly(false);
       setShowSavedSuccess(true);
       setTimeout(() => setShowSavedSuccess(false), 3000);
       setActiveTab('reparacao');
