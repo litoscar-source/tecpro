@@ -98,10 +98,10 @@ export function Orders() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleOpenModal = (order?: ServiceOrder) => {
+  const handleOpenModal = (order?: ServiceOrder, mode: 'view' | 'edit' = 'view') => {
     if (order) {
       setEditingOrder(order);
-      setIsFormReadOnly(true);
+      setIsFormReadOnly(mode === 'view');
       setFormData({
         customerId: order.customerId,
         orderType: order.orderType || 'repair',
@@ -503,7 +503,14 @@ export function Orders() {
                           </button>
                         </div>
                         <button
-                          onClick={() => handleOpenModal(order)}
+                          onClick={() => handleOpenModal(order, 'view')}
+                          className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600"
+                          title="Ver Detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenModal(order, 'edit')}
                           className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-600"
                           title="Editar"
                         >
