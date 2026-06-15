@@ -1,0 +1,233 @@
+41-  const submitActionRef = useRef<'save_and_close' | 'save_and_stay' | 'register_and_print' | 'register_and_repair' | 'save'>('save_and_close');
+42-
+43:  const [formData, setFormData] = useState({
+44-    customerId: '',
+45-    orderType: 'repair' as 'repair' | 'service',
+--
+103-      setEditingOrder(order);
+104-      setIsFormReadOnly(mode === 'view');
+105:      setFormData({
+106-        customerId: order.customerId,
+107-        orderType: order.orderType || 'repair',
+--
+135-      setEditingOrder(null);
+136-      setIsFormReadOnly(false);
+137:      setFormData({
+138-        customerId: '',
+139-        orderType: 'repair',
+--
+276-      createdAt: new Date().toISOString()
+277-    });
+278:    setFormData({ ...formData, customerId: newId });
+279-    setShowNewCustomerForm(false);
+280-    setNewCustomerData({
+--
+555-                  value={formData.status}
+556-                  disabled={isFormReadOnly}
+557:                  onChange={(e) => setFormData({ ...formData, status: e.target.value as OrderStatus })}
+558-                  className="rounded-md border-slate-200 bg-white px-3 py-1 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold shadow-sm text-blue-700 disabled:opacity-75 disabled:bg-slate-50"
+559-                >
+--
+650-                          <select
+651-                            value={formData.entryCondition}
+652:                            onChange={(e) => setFormData({ ...formData, entryCondition: e.target.value })}
+653-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+654-                          >
+--
+663-                          <select
+664-                            value={formData.orderType}
+665:                            onChange={(e) => setFormData({ ...formData, orderType: e.target.value as 'repair' | 'service' })}
+666-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+667-                          >
+--
+674-                          <select
+675-                            value={formData.deliveryMethod}
+676:                            onChange={(e) => setFormData({ ...formData, deliveryMethod: e.target.value as 'client' | 'carrier' })}
+677-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+678-                          >
+--
+704-                          <button
+705-                            type="button"
+706:                            onClick={() => { setShowNewCustomerForm(true); setFormData({ ...formData, customerId: '' }); }}
+707-                            className="text-sm bg-slate-100 text-blue-700 hover:bg-slate-200 font-medium flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors"
+708-                          >
+--
+716-                          required
+717-                          value={formData.customerId}
+718:                          onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+719-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm"
+720-                        >
+--
+916-                            placeholder="Ex: Telemóvel"
+917-                            value={formData.deviceType}
+918:                            onChange={(e) => setFormData({ ...formData, deviceType: e.target.value })}
+919-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+920-                          />
+--
+933-                            placeholder="Ex: Apple"
+934-                            value={formData.brand}
+935:                            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+936-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+937-                          />
+--
+949-                            placeholder="Ex: iPhone 13"
+950-                            value={formData.model}
+951:                            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+952-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+953-                          />
+--
+961-                            type="text"
+962-                            value={formData.serialNumber}
+963:                            onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+964-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
+965-                          />
+--
+971-                            placeholder="Ex: Carregador, Capa, Embalagem"
+972-                            value={formData.accessories}
+973:                            onChange={(e) => setFormData({ ...formData, accessories: e.target.value })}
+974-                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+975-                          />
+--
+983-                          placeholder="Ex: Marcas de uso gerais, ecrã com risco profundo no canto superior"
+984-                          value={formData.deviceCondition}
+985:                          onChange={(e) => setFormData({ ...formData, deviceCondition: e.target.value })}
+986-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+987-                        />
+--
+995-                          required
+996-                          value={formData.issueDescription}
+997:                          onChange={(e) => setFormData({ ...formData, issueDescription: e.target.value })}
+998-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+999-                          rows={4}
+--
+1007-                            type="checkbox"
+1008-                            checked={formData.isWarranty}
+1009:                            onChange={(e) => setFormData({ ...formData, isWarranty: e.target.checked })}
+1010-                            className="h-5 w-5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+1011-                          />
+--
+1037-                    <button
+1038-                      type="button"
+1039:                      onClick={() => { setIsFormReadOnly(false); setFormData({ ...formData, status: 'diagnostico' }); }}
+1040-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+1041-                    >
+--
+1052-                            type="radio"
+1053-                            checked={formData.repairLocation === 'interna'}
+1054:                            onChange={() => setFormData({ ...formData, repairLocation: 'interna' as 'interna' | 'externa' })}
+1055-                            className="text-blue-600 focus:ring-blue-500"
+1056-                          />
+--
+1061-                            type="radio"
+1062-                            checked={formData.repairLocation === 'externa'}
+1063:                            onChange={() => setFormData({ ...formData, repairLocation: 'externa' as 'interna' | 'externa' })}
+1064-                            className="text-blue-600 focus:ring-blue-500"
+1065-                          />
+--
+1076-                        type="text"
+1077-                        value={formData.externalSupplier}
+1078:                        onChange={(e) => setFormData({ ...formData, externalSupplier: e.target.value })}
+1079-                        className="w-full max-w-md rounded-md border border-indigo-200 px-3 py-2 text-sm outline-none focus:border-indigo-500 bg-white"
+1080-                        placeholder="Nome da empresa ou fornecedor..."
+--
+1087-                           type="button"
+1088-                           disabled={!formData.externalSupplier}
+1089:                           onClick={() => setFormData({
+1090-                             ...formData,
+1091-                             status: 'expedido',
+--
+1105-                         <button
+1106-                           type="button"
+1107:                           onClick={() => setFormData({
+1108-                             ...formData,
+1109-                             status: 'diagnostico',
+--
+1129-                      <textarea
+1130-                        value={formData.technicianNotes}
+1131:                        onChange={(e) => setFormData({ ...formData, technicianNotes: e.target.value })}
+1132-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1133-                        rows={4}
+--
+1142-                          <button 
+1143-                            type="button"
+1144:                            onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1, isManual: false }] })}
+1145-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+1146-                          >
+--
+1149-                          <button 
+1150-                            type="button"
+1151:                            onClick={() => setFormData({ ...formData, partsUsed: [...formData.partsUsed, { partId: '', quantity: 1, isManual: true, manualName: '', manualPrice: 0 }] })}
+1152-                            className="text-xs text-amber-600 hover:text-amber-800 font-medium"
+1153-                          >
+--
+1169-                                    const newParts = [...formData.partsUsed];
+1170-                                    newParts[index].partId = e.target.value;
+1171:                                    setFormData({ ...formData, partsUsed: newParts });
+1172-                                  }}
+1173-                                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+--
+1187-                                      const newParts = [...formData.partsUsed];
+1188-                                      newParts[index].manualName = e.target.value;
+1189:                                      setFormData({ ...formData, partsUsed: newParts });
+1190-                                    }}
+1191-                                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+--
+1200-                                      const newParts = [...formData.partsUsed];
+1201-                                      newParts[index].manualPrice = Number(e.target.value);
+1202:                                      setFormData({ ...formData, partsUsed: newParts });
+1203-                                    }}
+1204-                                    className="w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+--
+1213-                                  const newParts = [...formData.partsUsed];
+1214-                                  newParts[index].quantity = Number(e.target.value);
+1215:                                  setFormData({ ...formData, partsUsed: newParts });
+1216-                                }}
+1217-                                className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
+--
+1223-                                  const newParts = [...formData.partsUsed];
+1224-                                  newParts.splice(index, 1);
+1225:                                  setFormData({ ...formData, partsUsed: newParts });
+1226-                                }}
+1227-                                className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded"
+--
+1244-                          step="0.01"
+1245-                          value={formData.laborCost}
+1246:                          onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
+1247-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1248-                        />
+--
+1255-                          step="0.01"
+1256-                          value={formData.partsDiscount || 0}
+1257:                          onChange={(e) => setFormData({ ...formData, partsDiscount: Number(e.target.value) })}
+1258-                          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1259-                        />
+--
+1288-                  <textarea
+1289-                    value={formData.testsPerformed}
+1290:                    onChange={(e) => setFormData({ ...formData, testsPerformed: e.target.value })}
+1291-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1292-                    rows={6}
+--
+1318-                      <select
+1319-                        value={formData.resolutionType}
+1320:                        onChange={(e) => setFormData({ ...formData, resolutionType: e.target.value })}
+1321-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1322-                      >
+--
+1340-                      <select
+1341-                        value={formData.paymentStatus || 'pendente'}
+1342:                        onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
+1343-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1344-                      >
+--
+1352-                      <select
+1353-                        value={formData.paymentMethod || ''}
+1354:                        onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+1355-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1356-                      >
+--
+1368-                        type="date"
+1369-                        value={formData.paymentDate || ''}
+1370:                        onChange={(e) => setFormData({ ...formData, paymentDate: e.target.value })}
+1371-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+1372-                      />

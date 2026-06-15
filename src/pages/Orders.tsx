@@ -342,18 +342,27 @@ export function Orders() {
       }
     }
 
+    const savedOrder = {
+      ...(editingOrder || {}),
+      id: currentOrderId,
+      ...formData,
+      totalCost,
+      completedAt: editingOrder ? (formData.status === 'pronto' && editingOrder.status !== 'pronto' 
+        ? new Date().toISOString() 
+        : editingOrder.completedAt) : undefined,
+      createdAt: editingOrder?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as ServiceOrder;
+
     if (submitActionRef.current === 'save_and_stay') {
-      const savedOrder = !isNewProcess ? orders.find(o => o.id === currentOrderId) : { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-      setEditingOrder(savedOrder as ServiceOrder);
+      setEditingOrder(savedOrder);
       setIsFormReadOnly(true);
       setShowSavedSuccess(true);
       setTimeout(() => setShowSavedSuccess(false), 3000);
     } else if (submitActionRef.current === 'register_and_print') {
-      const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
       handlePrint(savedOrder, 'entrada');
       handleCloseModal();
     } else if (submitActionRef.current === 'register_and_repair') {
-      const savedOrder = { id: currentOrderId, ...formData, totalCost, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as ServiceOrder;
       setEditingOrder(savedOrder);
       setIsFormReadOnly(false);
       setShowSavedSuccess(true);
